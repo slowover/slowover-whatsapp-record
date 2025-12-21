@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SlowOver">
     <link rel="apple-touch-icon" href="https://img.icons8.com/clouds/512/shopping-bag.png">
-    <title>SlowOver CRM V61.1</title>
+    <title>SlowOver CRM V61.3</title>
     <style>
         :root { 
             --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; 
@@ -19,6 +19,7 @@
         input, textarea { -webkit-user-select: text !important; }
         body { font-family: -apple-system, system-ui; background: var(--bg); color: var(--text); margin: 0; padding: 20px 15px calc(var(--safe-bottom) + 100px) 15px; }
         
+        /* 導航 */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); display: flex; padding-bottom: var(--safe-bottom); border-top: 1px solid #EEE; z-index: 1000; }
         .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 11px; color: var(--gray); font-weight: bold; }
         .nav-item.active { color: var(--primary); }
@@ -30,9 +31,11 @@
         input, select, button { width: 100%; padding: 14px; margin: 5px 0; border: 1px solid #E0D7CC; border-radius: 12px; font-size: 15px; outline: none; box-sizing: border-box; }
         button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         
+        /* 訂單卡片 */
         .order-card { background: white; padding: 18px; border-radius: 25px; margin-bottom: 15px; border-left: 8px solid var(--primary); }
         .item-box { background: #FCFAf7; padding: 12px; border-radius: 15px; margin: 8px 0; border: 1px solid #F0E6D8; position: relative; }
         
+        /* 狀態 */
         .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; }
         .st-btn { font-size: 10px; padding: 10px 0; border-radius: 10px; background: #F8F9FA; color: #BBB; border: 1px solid #EEE; text-align: center; }
         .st-btn.active.paid { background: var(--green); color: white; border-color: var(--green); }
@@ -43,12 +46,15 @@
         .tag-bought { background: var(--yellow); color: #856404; }
         .tag-arrived { background: #E7F5FF; color: var(--blue); }
         
-        .info-tag { font-size: 11px; background: #F3F6F9; padding: 12px; border-radius: 15px; margin-top: 10px; border-left: 4px solid var(--blue); }
-        
-        /* 匯率按鈕排版 */
         .fee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-        .fee-btn { background: #EEE; color: #666; font-size: 12px; padding: 10px; }
+        .fee-btn { background: #F1F3F5; color: #666; font-size: 12px; padding: 10px; }
         .fee-btn.active { background: var(--accent); color: white; }
+
+        /* 歷史紀錄強化樣式 */
+        .history-list-box { max-height: 300px; overflow-y: auto; background: #F9F9F9; border-radius: 12px; margin-top: 10px; }
+        .history-item { font-size: 12px; padding: 12px; border-bottom: 1px solid #EEE; display: flex; justify-content: space-between; align-items: center; }
+        .history-item:last-child { border-bottom: none; }
+        .history-tag { font-size: 9px; background: #E9ECEF; padding: 2px 5px; border-radius: 4px; color: #777; margin-left: 4px; }
     </style>
 </head>
 <body>
@@ -89,7 +95,7 @@
     <div id="page-tools" class="page">
         <h2 style="padding-left:10px;">⚙️ 助手設定</h2>
         <div class="card">
-            <h3>💰 匯率助手 (連手續費)</h3>
+            <h3>💰 匯率助手 (30次紀錄)</h3>
             <select id="cur-sel" onchange="calcEx()">
                 <option value="KRW">韓幣 (KRW) 0.00585</option>
                 <option value="JPY">日幣 (JPY) 0.0525</option>
@@ -100,10 +106,16 @@
                 <button id="fee3" class="fee-btn active" onclick="setFee(1.03, this)">+3% (批發)</button>
                 <button id="fee5" class="fee-btn" onclick="setFee(1.05, this)">+5% (門市)</button>
             </div>
-            <div id="ex-res" style="font-size:20px; font-weight:bold; color:var(--primary); text-align:center; margin:10px 0;"></div>
+            <div id="ex-res" style="font-size:26px; font-weight:bold; color:var(--primary); text-align:center; margin:10px 0;"></div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                <h4 style="margin:0; font-size:13px; color:var(--gray);">🕒 最近計算紀錄 (上限30條)</h4>
+                <button onclick="clearCalcHistory()" style="width:auto; padding:4px 8px; font-size:10px; background:#F8D7DA; color:#721C24;">清空</button>
+            </div>
+            <div class="history-list-box" id="calc-history"></div>
         </div>
         <div class="card">
-            <button onclick="resetSerial()">🔢 重設起始流水號</button>
+            <button onclick="resetSerial()">🔢 修改流水號起始值</button>
             <button onclick="exportJSON()" style="background:var(--blue); margin-top:10px;">📥 導出備份數據</button>
         </div>
     </div>
@@ -113,50 +125,31 @@
         const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
         let orders = JSON.parse(localStorage.getItem('slow_v61_data') || '[]');
         let serial = parseInt(localStorage.getItem('slow_v61_serial') || '300');
+        let calcHistory = JSON.parse(localStorage.getItem('slow_calc_history') || '[]');
         let rates = { KRW: 0.00585, JPY: 0.0525, THB: 0.222 };
         let currentFee = 1.03;
 
         function addItemRow() {
             const div = document.createElement('div');
             div.className = 'item-box';
-            div.innerHTML = `
-                <input type="text" placeholder="商品名稱" class="in-n">
-                <div style="display:flex; gap:5px;">
-                    <input type="number" value="1" class="in-q" style="flex:1">
-                    <input type="number" placeholder="售價" class="in-p" style="flex:2">
-                    <input type="number" placeholder="成本" class="in-c" style="flex:2">
-                </div>
-                <button onclick="this.parentElement.remove()" style="position:absolute; top:5px; right:10px; width:auto; padding:0; background:none; color:var(--red); font-size:12px;">✕</button>
-            `;
+            div.innerHTML = `<input type="text" placeholder="商品名稱" class="in-n"><div style="display:flex; gap:5px;"><input type="number" value="1" class="in-q" style="flex:1"><input type="number" placeholder="售價" class="in-p" style="flex:2"><input type="number" placeholder="成本" class="in-c" style="flex:2"></div><button onclick="this.parentElement.remove()" style="position:absolute; top:5px; right:10px; width:auto; padding:0; background:none; color:var(--red); font-size:12px;">✕</button>`;
             document.getElementById('items-area').appendChild(div);
         }
 
         function saveOrder() {
             const tel = document.getElementById('cust-tel').value;
             const rows = document.querySelectorAll('.item-box');
-            if(!tel || rows.length === 0) return alert("請輸入電話及商品內容");
-
-            let items = [], total = 0, msgItems = "";
+            if(!tel || rows.length === 0) return alert("請輸入完整資料");
+            let itms = [], total = 0, txt = "";
             rows.forEach(r => {
-                const n = r.querySelector('.in-n').value;
-                const q = parseInt(r.querySelector('.in-q').value) || 1;
-                const p = parseFloat(r.querySelector('.in-p').value) || 0;
-                const c = parseFloat(r.querySelector('.in-c').value) || 0;
-                if(n) {
-                    items.push({name:n, qty:q, price:p, cost:c, bought:false, arrived:false});
-                    total += (q * p);
-                    msgItems += `- ${n} x ${q}\n`;
-                }
+                const n = r.querySelector('.in-n').value, q = parseInt(r.querySelector('.in-q').value) || 1, p = parseFloat(r.querySelector('.in-p').value) || 0, c = parseFloat(r.querySelector('.in-c').value) || 0;
+                if(n) { itms.push({name:n, qty:q, price:p, cost:c, bought:false, arrived:false}); total += (q * p); txt += `- ${n} x ${q}\n`; }
             });
-
             const id = `WS${new Date().getFullYear().toString().slice(-2)}${MONTHS[new Date().getMonth()]}${serial++}`;
-            orders.push({ id, date: document.getElementById('order-date').value, tel, items, totalPrice: total, paid:false, shipped:false, refunded:false, address: "", sfNo: "" });
-            
+            orders.push({ id, date: document.getElementById('order-date').value, tel, items: itms, totalPrice: total, paid:false, shipped:false, refunded:false, address: "", sfNo: "" });
             localStorage.setItem('slow_v61_data', JSON.stringify(orders));
             localStorage.setItem('slow_v61_serial', serial);
-
-            const msg = `【SlowOver 出單】\n編號：#${id}\n電話：${tel}\n明細：\n${msgItems}總額：$${total}\n\n*24h內入數請傳收據，註備電話，謝謝！*`;
-            window.open(`https://wa.me/852${tel.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
+            window.open(`https://wa.me/852${tel.replace(/\D/g,'')}?text=${encodeURIComponent(`【SlowOver 出單】\n單號：#${id}\n明細：\n${txt}總計：$${total}`)}`);
             location.reload();
         }
 
@@ -164,51 +157,20 @@
             const search = document.getElementById('stat-search')?.value.toLowerCase() || "";
             const list = document.getElementById('list-container');
             const statList = document.getElementById('stats-list');
-            
             let html = "";
-            let filteredOrders = orders.slice().reverse().filter(o => {
-                return o.id.toLowerCase().includes(search) || 
-                       o.tel.includes(search) || 
-                       o.items.some(i => i.name.toLowerCase().includes(search));
-            });
-
-            filteredOrders.forEach(o => {
+            let filtered = orders.slice().reverse().filter(o => o.id.toLowerCase().includes(search) || o.tel.includes(search) || o.items.some(i => i.name.toLowerCase().includes(search)));
+            filtered.forEach(o => {
                 const ri = orders.indexOf(o);
-                html += `
-                <div class="order-card">
-                    <small>#${o.id} | ${o.date}</small>
-                    <strong style="display:block; margin:5px 0;">📞 ${o.tel} <span style="float:right; color:var(--red);">$${o.totalPrice}</span></strong>
-                    ${o.items.map((it, ii) => `
-                        <div class="item-box" style="font-size:13px; margin-bottom:5px;">
-                            ${it.name} x${it.qty}
-                            <div style="margin-top:5px;">
-                                <span class="tag-btn ${it.bought?'tag-bought':''}" onclick="toggleIt(${ri},${ii},'bought')">${it.bought?'已買':'待買'}</span>
-                                <span class="tag-btn ${it.arrived?'tag-arrived':''}" onclick="toggleIt(${ri},${ii},'arrived')">${it.arrived?'已到港':'待到'}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                    <div class="status-grid">
-                        <div class="st-btn paid ${o.paid?'active':''}" onclick="upd(${ri},'paid')">已付</div>
-                        <div class="st-btn shipped ${o.shipped?'active':''}" onclick="upd(${ri},'shipped')">已寄</div>
-                        <div class="st-btn refunded ${o.refunded?'active':''}" onclick="upd(${ri},'refunded')">退款</div>
-                    </div>
-                    <div style="display:flex; gap:5px;">
-                        <button onclick="setField(${ri},'address','收貨資料')" style="font-size:11px; background:#EEE; color:#333;">🏠 地址</button>
-                        <button onclick="setField(${ri},'sfNo','順豐單號')" style="font-size:11px; background:#EEE; color:#333;">📦 單號</button>
-                    </div>
-                    ${(o.address || o.sfNo) ? `<div class="info-tag">${o.address?`📍 ${o.address}<br>`:''}${o.sfNo?`🚚 單號: ${o.sfNo}`:''}</div>`:''}
-                </div>`;
+                html += `<div class="order-card"><div style="display:flex; justify-content:space-between;"><small>#${o.id}</small><b style="color:var(--red)">$${o.totalPrice}</b></div><strong>📞 ${o.tel}</strong>
+                ${o.items.map((it, ii) => `<div class="item-box" style="font-size:13px;">${it.name} x${it.qty}<div><span class="tag-btn ${it.bought?'tag-bought':''}" onclick="toggleStatus(${ri},${ii},'bought')">${it.bought?'已買':'待買'}</span><span class="tag-btn ${it.arrived?'tag-arrived':''}" onclick="toggleStatus(${ri},${ii},'arrived')">${it.arrived?'已到港':'待到'}</span></div></div>`).join('')}
+                <div class="status-grid"><div class="st-btn paid ${o.paid?'active':''}" onclick="updStatus(${ri},'paid')">已付</div><div class="st-btn shipped ${o.shipped?'active':''}" onclick="updStatus(${ri},'shipped')">已寄</div><div class="st-btn refunded ${o.refunded?'active':''}" onclick="updStatus(${ri},'refunded')">退款</div></div>
+                <div style="display:flex; gap:5px;"><button onclick="setInfo(${ri},'address','地址')" style="font-size:11px; background:#EEE; color:#333;">🏠 地址</button><button onclick="setInfo(${ri},'sfNo','單號')" style="font-size:11px; background:#EEE; color:#333;">📦 單號</button></div>
+                ${(o.address || o.sfNo) ? `<div class="info-tag">${o.address?`📍 ${o.address}<br>`:''}${o.sfNo?`🚚 SF: ${o.sfNo}`:''}</div>`:''}</div>`;
             });
-
             if(list) list.innerHTML = (search === "") ? html : ""; 
             if(statList) statList.innerHTML = (search !== "") ? html : "";
-            updateSummary();
+            updateSummary(); renderCalcHistory();
         }
-
-        function toggleIt(i, ii, k) { orders[i].items[ii][k] = !orders[i].items[ii][k]; save(); }
-        function upd(i, k) { orders[i][k] = !orders[i][k]; save(); }
-        function setField(i, k, l) { const v = prompt(`輸入${l}:`, orders[i][k]); if(v!==null) { orders[i][k]=v; save(); } }
-        function save() { localStorage.setItem('slow_v61_data', JSON.stringify(orders)); render(); }
 
         function setFee(f, btn) {
             currentFee = f;
@@ -217,45 +179,54 @@
             calcEx();
         }
 
+        let debounceTimer;
         function calcEx() {
             const cur = document.getElementById('cur-sel').value;
             const amt = parseFloat(document.getElementById('ex-in').value) || 0;
             const res = (amt * rates[cur] * currentFee).toFixed(2);
             document.getElementById('ex-res').innerText = amt ? `HKD $${res}` : "";
+            
+            clearTimeout(debounceTimer);
+            if(amt > 0) {
+                debounceTimer = setTimeout(() => {
+                    const record = { cur, amt, fee: (currentFee === 1.03 ? '3%' : '5%'), res, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+                    // 檢查是否與最後一筆相同，避免重複記錄
+                    if(calcHistory.length > 0 && calcHistory[0].amt === record.amt && calcHistory[0].cur === record.cur && calcHistory[0].fee === record.fee) return;
+                    calcHistory.unshift(record);
+                    calcHistory = calcHistory.slice(0, 30); // 擴展到 30 條
+                    localStorage.setItem('slow_calc_history', JSON.stringify(calcHistory));
+                    renderCalcHistory();
+                }, 1200);
+            }
         }
 
-        function updateSummary() {
-            let sales = 0, cost = 0;
-            orders.forEach(o => { if(!o.refunded) { sales += o.totalPrice; o.items.forEach(it => cost += (it.qty * it.cost)); } });
-            const sSum = document.getElementById('stats-summary');
-            if(sSum) sSum.innerHTML = `<div class="card" style="background:var(--primary); color:white; text-align:center;"><h3>總營收: $${sales}</h3><p>預估利潤: $${sales - cost}</p></div>`;
+        function renderCalcHistory() {
+            const hBox = document.getElementById('calc-history');
+            if(!hBox) return;
+            hBox.innerHTML = calcHistory.map(h => `
+                <div class="history-item">
+                    <div style="display:flex; align-items:center;">
+                        <strong>${h.amt}</strong> <small style="margin-left:4px;">${h.cur}</small>
+                        <span class="history-tag">${h.fee}</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="color:var(--primary); font-weight:bold; font-size:14px;">$${h.res}</span><br>
+                        <small style="color:#CCC; font-size:9px;">${h.time}</small>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function switchPage(p, btn) {
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById('page-' + p).classList.add('active');
-            btn.classList.add('active');
-            if(p === 'buy') renderBuy();
-        }
-
-        function renderBuy() {
-            const container = document.getElementById('buy-container');
-            let html = "";
-            orders.forEach((o, i) => {
-                o.items.forEach((it, ii) => {
-                    if(!it.bought || !it.arrived) {
-                        html += `<div class="card"><b>#${o.id}</b> | ${o.tel}<br>${it.name} x${it.qty}
-                        <button onclick="toggleIt(${i},${ii},'bought')" style="width:70px; float:right; background:${it.bought?'var(--green)':'var(--yellow)'}; font-size:11px;">${it.bought?'已買':'待買'}</button></div>`;
-                    }
-                });
-            });
-            container.innerHTML = html || "<p style='text-align:center; color:#999;'>暫無採購項目</p>";
-        }
-
+        function clearCalcHistory() { if(confirm("確定清空所有報價紀錄？")) { calcHistory = []; localStorage.setItem('slow_calc_history', '[]'); renderCalcHistory(); } }
+        function toggleStatus(i, ii, k) { orders[i].items[ii][k] = !orders[i].items[ii][k]; save(); }
+        function updStatus(i, k) { orders[i][k] = !orders[i][k]; save(); }
+        function setInfo(i, k, l) { const v = prompt(`輸入${l}:`, orders[i][k]); if(v!==null) { orders[i][k]=v; save(); } }
+        function save() { localStorage.setItem('slow_v61_data', JSON.stringify(orders)); render(); }
+        function updateSummary() { let s = 0, c = 0; orders.forEach(o => { if(!o.refunded) { s += o.totalPrice; o.items.forEach(it => c += (it.qty * it.cost)); } }); const sSum = document.getElementById('stats-summary'); if(sSum) sSum.innerHTML = `<div class="card" style="background:var(--primary); color:white; text-align:center;"><h3>總營收: $${s}</h3><p>利潤: $${s - c}</p></div>`; }
+        function switchPage(p, btn) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.querySelectorAll('.page').forEach(el => el.classList.remove('active')); document.getElementById('page-' + p).classList.add('active'); btn.classList.add('active'); if(p === 'buy') renderBuy(); }
+        function renderBuy() { const container = document.getElementById('buy-container'); let html = ""; orders.forEach((o, i) => { o.items.forEach((it, ii) => { if(!it.bought || !it.arrived) { html += `<div class="card"><b>#${o.id}</b> | ${o.tel}<br>${it.name} x${it.qty}<button onclick="toggleStatus(${i},${ii},'bought')" style="width:70px; float:right; background:${it.bought?'var(--green)':'var(--yellow)'}; font-size:11px;">${it.bought?'已買':'待買'}</button></div>`; } }); }); container.innerHTML = html || "<p style='text-align:center; color:#999;'>暫無採購項目</p>"; }
         function resetSerial() { const v = prompt("新起始編號:", serial); if(v) { serial = parseInt(v); localStorage.setItem('slow_v61_serial', serial); } }
         function exportJSON() { const data = JSON.stringify(orders); const blob = new Blob([data], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SlowOver_Backup.json`; a.click(); }
-
         window.onload = () => { document.getElementById('order-date').valueAsDate = new Date(); addItemRow(); render(); };
     </script>
 </body>
