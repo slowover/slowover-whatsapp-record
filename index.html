@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SlowOver CRM V64.4</title>
+    <title>SlowOver CRM V65.0</title>
     <style>
         :root { 
             --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; 
@@ -35,11 +35,10 @@
         .st-btn { font-size: 10px; padding: 10px 0; border-radius: 10px; background: #F8F9FA; color: #BBB; border: 1px solid #EEE; text-align: center; }
         .st-btn.active.paid { background: var(--green); color: white; border-color: var(--green); }
         .st-btn.active.shipped { background: var(--blue); color: white; border-color: var(--blue); }
-        .st-btn.active.refunded { background: var(--red); color: white; border-color: var(--red); }
         
-        .tag-btn { display: inline-block; padding: 5px 10px; border-radius: 8px; font-size: 11px; margin-top: 8px; font-weight: bold; }
-        .tag-bought { background: var(--yellow); color: #856404; }
-        .tag-arrived { background: #E7F5FF; color: var(--blue); }
+        .fee-btn { background: #EEE; color: #666; font-size: 12px; }
+        .fee-btn.active { background: var(--accent); color: white; }
+        #ex-res { font-size: 28px; font-weight: bold; color: var(--primary); text-align: center; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -47,7 +46,6 @@
     <div class="nav-bar">
         <div class="nav-item active" onclick="switchPage('main', this)">📝 訂單</div>
         <div class="nav-item" onclick="switchPage('buy', this)">🛍️ 採購</div>
-        <div class="nav-item" onclick="switchPage('stats', this)">📊 統計</div>
         <div class="nav-item" onclick="switchPage('tools', this)">⚙️ 設定</div>
     </div>
 
@@ -68,18 +66,26 @@
         <div id="buy-container"></div>
     </div>
 
-    <div id="page-stats" class="page">
-        <h2 style="padding-left:10px;">📊 搜尋</h2>
-        <div class="card"><input type="text" id="stat-search" placeholder="🔍 搜尋..." oninput="render()"></div>
-        <div id="stats-summary"></div>
-        <div id="stats-list"></div>
-    </div>
-
     <div id="page-tools" class="page">
-        <h2 style="padding-left:10px;">⚙️ 設定</h2>
+        <h2 style="padding-left:10px;">⚙️ 系統與匯率</h2>
         <div class="card">
+            <h3>💰 匯率助手</h3>
+            <select id="cur-sel" onchange="calcEx()">
+                <option value="KRW">韓幣 (KRW) 0.00585</option>
+                <option value="JPY">日幣 (JPY) 0.0525</option>
+                <option value="THB">泰幣 (THB) 0.222</option>
+            </select>
+            <input type="number" id="ex-in" placeholder="輸入外幣金額" oninput="calcEx()">
+            <div style="display:flex; gap:5px; margin:5px 0;">
+                <button id="fee3" class="fee-btn active" onclick="setFee(1.03, this)">+3% 批發</button>
+                <button id="fee5" class="fee-btn" onclick="setFee(1.05, this)">+5% 零售</button>
+            </div>
+            <div id="ex-res"></div>
+        </div>
+        <div class="card">
+            <h3>☁️ 雲端功能</h3>
             <button onclick="syncToCloud()" style="background:var(--blue)">上傳雲端</button>
-            <button onclick="syncFromCloud()" style="background:var(--accent)">下載雲端</button>
+            <button onclick="syncFromCloud()" style="background:var(--accent); margin-top:10px;">下載雲端</button>
             <button onclick="clearAllData()" style="background:var(--red); margin-top:20px;">⚠️ 清除本地數據</button>
         </div>
     </div>
@@ -90,53 +96,36 @@
         
         let orders = JSON.parse(localStorage.getItem('slow_v62_data') || '[]');
         let serial = parseInt(localStorage.getItem('slow_v62_serial') || '300');
+        let currentFee = 1.03;
+        let rates = { KRW: 0.00585, JPY: 0.0525, THB: 0.222 };
+
+        const PAYMENT_INFO = `💸付款方式：\nPayMe：\nhttps://qr.payme.hsbc.com.hk/2/Ui316pJ5T8b428yzTSbr4J\n\nFPS:\n快速支付系統識別碼FPS ID：105249023\n名稱：slow over\n\n⚠️ 注意事項：\n- 24小時內完成付款並回傳入數截圖\n- 截圖請備註電話號碼以便對賬`;
+        const FULL_TERMS = `下單即同意以下條款：\n1. 24小時內完成付款並回傳入數截圖。\n2. 截圖請備註或訊息電話號碼以便對賬。\n3. 訂單一經確認，不設取消、退換或更改。\n4. 如遇商品缺貨，將會全數退款。\n5. 一般預訂需時 7-30 個工作天，不接急單。\n6. 運送過程如有損壞風險需由買家承擔。\n7. SLOWOVER 保留最終決定權。\n\n🌻🌻感謝支持 SLOWOVER！🌻🌻`;
 
         function addItemRow() {
             const div = document.createElement('div');
             div.className = 'item-box';
-            div.innerHTML = `
-                <input type="text" placeholder="商品名稱" class="in-n">
-                <div style="display:flex; gap:5px;">
-                    <input type="number" value="1" class="in-q" style="flex:1">
-                    <input type="number" placeholder="售價" class="in-p" style="flex:2">
-                </div>
-                <button onclick="this.parentElement.remove()" style="position:absolute; top:5px; right:10px; width:auto; background:none; color:var(--red); font-size:12px;">✕</button>
-            `;
+            div.innerHTML = `<input type="text" placeholder="商品名稱" class="in-n"><div style="display:flex; gap:5px;"><input type="number" value="1" class="in-q" style="flex:1"><input type="number" placeholder="售價" class="in-p" style="flex:2"></div><button onclick="this.parentElement.remove()" style="position:absolute; top:5px; right:10px; width:auto; background:none; color:var(--red); font-size:12px;">✕</button>`;
             document.getElementById('items-area').appendChild(div);
         }
 
         function saveOrder() {
             try {
-                // 強制重新定位元素，避免切換頁面導致的 null
-                const elDate = document.getElementById('order-date');
-                const elTel = document.getElementById('cust-tel');
-                
-                if (!elDate || !elTel) {
-                    throw new Error("找不到輸入框元素，請重整頁面");
-                }
-
-                const tel = elTel.value.trim();
-                const date = elDate.value;
+                const tel = document.getElementById('cust-tel').value.trim();
+                const date = document.getElementById('order-date').value;
                 const rows = document.querySelectorAll('.item-box');
-
-                if(!tel) { alert("請輸入客戶電話"); return; }
-                if(rows.length === 0) { alert("請至少新增一項商品"); return; }
+                if(!tel || rows.length === 0) return alert("請輸入電話與商品");
                 
                 let items = [], total = 0;
                 rows.forEach(r => {
-                    const n = r.querySelector('.in-n').value.trim();
+                    const n = r.querySelector('.in-n').value;
                     const q = parseInt(r.querySelector('.in-q').value) || 1;
                     const p = parseFloat(r.querySelector('.in-p').value) || 0;
-                    if(n) { 
-                        items.push({name:n, qty:q, price:p, bought:false, arrived:false}); 
-                        total += (q * p); 
-                    }
+                    if(n) { items.push({name:n, qty:q, price:p, bought:false, arrived:false}); total += (q * p); }
                 });
 
-                if(items.length === 0) { alert("商品名稱不能為空"); return; }
-
                 const id = `WS${new Date().getFullYear().toString().slice(-2)}${MONTHS[new Date().getMonth()]}${serial}`;
-                const newOrder = { id, date, tel, items, totalPrice: total, paid:false, shipped:false, refunded:false, address: "", sfNo: "" };
+                const newOrder = { id, date, tel, items, totalPrice: total, paid:false, shipped:false, address: "", sfNo: "" };
                 
                 orders.push(newOrder);
                 serial++;
@@ -144,19 +133,29 @@
                 localStorage.setItem('slow_v62_data', JSON.stringify(orders));
                 localStorage.setItem('slow_v62_serial', serial.toString());
                 
-                elTel.value = "";
+                document.getElementById('cust-tel').value = "";
                 document.getElementById('items-area').innerHTML = "";
                 addItemRow();
-                
-                alert("✅ 儲存成功！編號: " + id);
+                alert("✅ 儲存成功！單號: " + id);
                 render(); 
-            } catch (err) {
-                alert("儲存出錯: " + err.message);
-                console.error(err);
-            }
+            } catch (err) { alert("儲存失敗: " + err.message); }
         }
 
-        // --- 其他功能保持穩定 ---
+        // --- 匯率邏輯 ---
+        function setFee(f, btn) {
+            currentFee = f;
+            document.querySelectorAll('.fee-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            calcEx();
+        }
+
+        function calcEx() {
+            const cur = document.getElementById('cur-sel').value;
+            const amt = parseFloat(document.getElementById('ex-in').value) || 0;
+            const res = (amt * rates[cur] * currentFee).toFixed(2);
+            document.getElementById('ex-res').innerText = amt ? `HKD $${res}` : "";
+        }
+
         function render() {
             const list = document.getElementById('list-container');
             if(!list) return;
@@ -166,26 +165,50 @@
                 html += `<div class="order-card">
                     <div style="display:flex; justify-content:space-between;"><small>#${o.id}</small><b>$${o.totalPrice}</b></div>
                     <strong>📞 ${o.tel}</strong>
-                    ${o.items.map((it, ii) => `<div class="item-box" style="font-size:12px;">${it.name} x${it.qty}</div>`).join('')}
+                    ${o.items.map(it => `<div class="item-box" style="font-size:12px;">${it.name} x${it.qty}</div>`).join('')}
                     <div class="status-grid">
                         <div class="st-btn paid ${o.paid?'active':''}" onclick="updStatus(${ri},'paid')">已付</div>
                         <div class="st-btn shipped ${o.shipped?'active':''}" onclick="updStatus(${ri},'shipped')">已寄</div>
                     </div>
-                    <button onclick="delOrder(${ri})" style="background:none; color:var(--red); font-size:11px; margin-top:10px;">刪除訂單</button>
+                    <button onclick="copyNotice(${ri})" style="background:#5C7CFA; margin:5px 0;">📋 複製出單通知</button>
+                    <button onclick="delOrder(${ri})" style="background:none; color:var(--red); font-size:11px;">刪除</button>
                 </div>`;
             });
             list.innerHTML = html;
         }
 
+        async function copyNotice(idx) {
+            const o = orders[idx];
+            let itemStr = "";
+            o.items.forEach(i => itemStr += `- ${i.name} x ${i.qty}\n`);
+            const msg = `【SlowOver 出單通知】\n單號：#${o.id}\n日期：${o.date}\n電話：${o.tel}\n\n訂購項目：\n${itemStr}總計金額：HKD $${o.totalPrice}\n\n${PAYMENT_INFO}\n\n${FULL_TERMS}`;
+            await navigator.clipboard.writeText(msg);
+            alert("✅ 通知已複製");
+        }
+
         function updStatus(i, k) { orders[i][k] = !orders[i][k]; save(); }
         function delOrder(i) { if(confirm("確定刪除？")) { orders.splice(i,1); save(); } }
         function save() { localStorage.setItem('slow_v62_data', JSON.stringify(orders)); render(); }
+        
+        async function syncToCloud() {
+            const blob = new Blob([JSON.stringify(orders)], {type: 'text/plain'});
+            await fetch(GAS_URL, { method: 'POST', body: blob, mode: 'no-cors' });
+            alert("✅ 上傳指令已發送");
+        }
+
+        async function syncFromCloud() {
+            const res = await fetch(GAS_URL);
+            const data = await res.json();
+            if(data) { orders = data; save(); alert("✅ 下載完成"); }
+        }
+
         function switchPage(p, btn) { 
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active')); 
             document.getElementById('page-' + p).classList.add('active'); 
             btn.classList.add('active'); 
         }
+
         function clearAllData() { if(confirm("確定永久清除所有訂單？")) { localStorage.clear(); location.reload(); } }
 
         window.onload = () => { 
