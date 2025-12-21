@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V70.2</title>
+    <title>SlowOver CRM V72.0</title>
     <style>
         :root { 
             --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; 
@@ -27,7 +27,6 @@
         .order-card { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; border-left: 8px solid var(--primary); border: 1px solid #EEE; }
         .item-box { background: #FCFAf7; padding: 12px; border-radius: 12px; margin: 8px 0; border: 1px solid #F0E6D8; position: relative; }
         
-        /* 刪除按鈕優化：縮小區域並精確定位 */
         .del-btn-small { position: absolute; top: 5px; right: 5px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #FFF5F5; border: 1px solid #FFC9C9; border-radius: 8px; color: var(--red); font-size: 14px; cursor: pointer; z-index: 5; }
 
         .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 10px 0; }
@@ -42,6 +41,7 @@
         .tag.active.arr { background: var(--blue); color: white; border-color: var(--blue); }
 
         .quote-hist { font-size: 11px; border-bottom: 1px solid #EEE; padding: 8px 0; display: flex; justify-content: space-between; }
+        .stat-status-badge { font-size: 11px; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -83,7 +83,7 @@
 
     <div id="page-tools" class="page">
         <div class="card">
-            <h3>💰 匯率助手 (報價歷史)</h3>
+            <h3>💰 匯率助手</h3>
             <select id="cur-sel" onchange="calcEx()">
                 <option value="KRW">韓幣 (0.00585)</option>
                 <option value="JPY">日幣 (0.0525)</option>
@@ -98,7 +98,7 @@
             <div id="quote-history-list" style="margin-top:10px; max-height:180px; overflow-y:auto; border-top:1px solid #EEE;"></div>
         </div>
         <div class="card">
-            <button onclick="syncToCloud()" style="background:var(--blue)">☁️ 上傳至雲端 (含商品詳情)</button>
+            <button onclick="syncToCloud()" style="background:var(--blue)">☁️ 上傳至雲端</button>
             <button onclick="syncFromCloud()" style="background:var(--accent); margin-top:10px;">☁️ 從雲端下載</button>
             <button onclick="resetSerial()" style="margin-top:20px;">🔢 自訂單號起始</button>
         </div>
@@ -116,6 +116,20 @@
 
         const PAY_INFO = `PayMe：https://qr.payme.hsbc.com.hk/2/Ui316pJ5T8b428yzTSbr4J\n\nFPS:\n快速支付系統識別碼FPS ID：105249023\n名稱：slow over\n\n注意事項：\n24小時內完成付款並回傳入數截圖\n截圖請備註電話號碼以便對賬`;
         const TERMS = `下單即同意以下條款：\n1. 24小時內完成付款並回傳入數截圖。\n2. 截圖請備註或訊息電話號碼以便對賬。\n3. 訂單一經確認，不設取消、退換或更改。\n4. 如遇商品缺貨，將會全數退款。\n5. 一般預訂需時 7-30 個工作天，不接急單。\n6. 運送過程如有損壞風險需由買家承擔。\n7. SLOWOVER 保留最終決定權。\n感謝支持 SLOWOVER！🌻`;
+
+        // 核心邏輯：自動狀態偵測
+        function getAutoStatus(o) {
+            if (o.refunded) return { text: "❌ 已退款", color: "#E03131" };
+            if (o.sfNo || o.address) return { text: "🚚 已發貨", color: "#5C7CFA" };
+            
+            const allBought = o.items.length > 0 && o.items.every(i => i.bought);
+            const allArrived = o.items.length > 0 && o.items.every(i => i.arrived);
+
+            if (allArrived) return { text: "✅ 全部到港，未寄出", color: "#7048E8" };
+            if (allBought) return { text: "🛍️ 已買齊，未到港", color: "#D4A373" };
+            
+            return { text: "⏳ 採購中", color: "#999" };
+        }
 
         function addItemRow() {
             const div = document.createElement('div');
@@ -173,10 +187,8 @@
                         <div class="st-btn shipped ${o.shipped?'active':''}" onclick="updStatus(${ri},'shipped')">已寄出</div>
                         <div class="st-btn refunded ${o.refunded?'active':''}" onclick="updStatus(${ri},'refunded')">已退款</div>
                     </div>
-                    <div class="card" style="padding:10px; background:#F8F9FA;">
-                        <input type="text" placeholder="收件資料 (姓名/電話/地點)" value="${o.address||''}" onchange="updInfo(${ri},'address',this.value)">
-                        <input type="text" placeholder="🚚 登記運單號碼" value="${o.sfNo||''}" onchange="updInfo(${ri},'sfNo',this.value)">
-                    </div>
+                    <input type="text" placeholder="收件人姓名/電話/地址" value="${o.address||''}" onchange="updInfo(${ri},'address',this.value)" style="background:#F8F9FA">
+                    <input type="text" placeholder="🚚 登記運單號碼" value="${o.sfNo||''}" onchange="updInfo(${ri},'sfNo',this.value)" style="background:#F8F9FA">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
                         <button onclick="copyNotice(${ri})" style="background:var(--accent); font-size:11px;">📋 複製出單通知</button>
                         <button onclick="copyAskInfo(${ri})" style="background:var(--purple); font-size:11px;">📋 索取收貨資料</button>
@@ -187,11 +199,52 @@
             list.innerHTML = html;
         }
 
+        function renderStats() {
+            const key = document.getElementById('main-search').value.toLowerCase();
+            const sd = document.getElementById('stat-sdate').value, ed = document.getElementById('stat-edate').value;
+            let filtered = orders.filter(o => (o.tel.includes(key) || o.id.toLowerCase().includes(key) || o.items.some(i => i.name.toLowerCase().includes(key))) && (!sd || o.date >= sd) && (!ed || o.date <= ed));
+            let rev = 0, cost = 0;
+            let html = "";
+            filtered.forEach(o => {
+                const ri = orders.indexOf(o);
+                const s = getAutoStatus(o);
+                if(!o.refunded) { rev += o.totalPrice; cost += o.totalCost; }
+                html += `
+                <div class="card" style="font-size:13px; border-left: 5px solid ${s.color}">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b>#${o.id}</b>
+                        <span style="color:${s.color}; font-weight:bold;">${s.text}</span>
+                    </div>
+                    <div style="color:#888; margin:5px 0;">📞 ${o.tel}</div>
+                    <div style="background:#fefefe; padding:8px; border-radius:10px; border:1px solid #eee;">
+                        ${o.items.map((it, ii) => `
+                            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px; margin-bottom:5px; align-items:center;">
+                                <span style="font-size:11px;">${it.name}</span>
+                                <input type="number" value="${it.price}" onchange="updateItemVal(${ri},${ii},'price',this.value)" style="padding:4px; font-size:11px; margin:0;">
+                                <input type="number" value="${it.cost}" onchange="updateItemVal(${ri},${ii},'cost',this.value)" style="padding:4px; font-size:11px; margin:0; border-color:var(--accent);">
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="margin-top:8px; text-align:right; font-weight:bold;">
+                        利潤: <span style="color:var(--green)">$${(o.totalPrice - o.totalCost).toFixed(1)}</span>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('stats-summary-box').innerHTML = `<div style="background:var(--primary); color:white; padding:15px; border-radius:15px; text-align:center;">營業額<br><b>$${rev.toFixed(1)}</b></div><div style="background:var(--accent); color:white; padding:15px; border-radius:15px; text-align:center;">利潤<br><b>$${(rev-cost).toFixed(1)}</b></div>`;
+            document.getElementById('stats-list').innerHTML = html;
+        }
+
+        function updateItemVal(ri, ii, key, val) {
+            orders[ri].items[ii][key] = parseFloat(val) || 0;
+            let newP = 0, newC = 0;
+            orders[ri].items.forEach(it => { newP += (it.price * it.qty); newC += (it.cost * it.qty); });
+            orders[ri].totalPrice = newP; orders[ri].totalCost = newC;
+            save(); renderStats();
+        }
+
         function toggleTag(ri, ii, key) {
             orders[ri].items[ii][key] = !orders[ri].items[ii][key];
-            if(key === 'arrived') {
-                orders[ri].arrivedAll = orders[ri].items.every(i => i.arrived === true);
-            }
+            if(key === 'arrived') orders[ri].arrivedAll = orders[ri].items.every(i => i.arrived);
             save(); render();
         }
 
@@ -199,75 +252,39 @@
             let sum = {};
             orders.forEach(o => o.items.forEach(it => {
                 if(!sum[it.name]) sum[it.name] = { total: 0, bought: 0 };
-                sum[it.name].total += it.qty;
-                if(it.bought) sum[it.name].bought += it.qty;
+                sum[it.name].total += it.qty; if(it.bought) sum[it.name].bought += it.qty;
             }));
             let unDone = "", done = "";
             for(let n in sum) {
-                const s = sum[n];
-                const row = `<div style="border-bottom:1px solid #EEE; padding:10px 0;"><b>${n}</b><br><small>總需: ${s.total} | 已買: ${s.bought} | <span style="color:var(--red)">未買: ${s.total-s.bought}</span></small></div>`;
-                if(s.bought < s.total) unDone += row; else done += row;
+                const row = `<div style="border-bottom:1px solid #EEE; padding:10px 0;"><b>${n}</b><br><small>總需: ${sum[n].total} | 已買: ${sum[n].bought} | <span style="color:var(--red)">未買: ${sum[n].total-sum[n].bought}</span></small></div>`;
+                if(sum[n].bought < sum[n].total) unDone += row; else done += row;
             }
             document.getElementById('buy-content').innerHTML = `<h4>未完成</h4>${unDone || '🎉 全部已買'}<hr><h4>已完成</h4>${done || '無'}`;
         }
 
-        function renderStats() {
-            const key = document.getElementById('main-search').value.toLowerCase();
-            const sd = document.getElementById('stat-sdate').value, ed = document.getElementById('stat-edate').value;
-            let filtered = orders.filter(o => {
-                const mk = o.tel.includes(key) || o.id.toLowerCase().includes(key) || o.items.some(i => i.name.toLowerCase().includes(key));
-                const md = (!sd || o.date >= sd) && (!ed || o.date <= ed);
-                return mk && md;
-            });
-            let rev = 0, cost = 0;
-            filtered.forEach(o => { if(!o.refunded) { rev += o.totalPrice; cost += o.totalCost; } });
-            document.getElementById('stats-summary-box').innerHTML = `<div style="background:var(--primary); color:white; padding:15px; border-radius:15px; text-align:center;">營業額<br><b>$${rev.toFixed(1)}</b></div><div style="background:var(--accent); color:white; padding:15px; border-radius:15px; text-align:center;">利潤<br><b>$${(rev-cost).toFixed(1)}</b></div>`;
-            document.getElementById('stats-list').innerHTML = filtered.map(o => `<div class="card" style="font-size:12px;"><b>#${o.id}</b> | ${o.tel} <b style="float:right">$${o.totalPrice}</b></div>`).join('');
-        }
-
         function calcEx() {
-            const amt = document.getElementById('ex-in').value;
-            const cur = document.getElementById('cur-sel').value;
+            const amt = document.getElementById('ex-in').value, cur = document.getElementById('cur-sel').value;
             if(!amt) return;
             const res = (amt * rates[cur] * currentFee).toFixed(2);
             document.getElementById('ex-res').innerText = `HKD $${res}`;
-            
-            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            quotes.unshift({ cur, amt, fee: (currentFee === 1.03 ? '+3%' : '+5%'), res, time });
+            quotes.unshift({ cur, amt, fee: (currentFee === 1.03 ? '+3%' : '+5%'), res, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
             if(quotes.length > 30) quotes.pop();
-            localStorage.setItem('slow_quotes', JSON.stringify(quotes));
-            renderQuotes();
+            localStorage.setItem('slow_quotes', JSON.stringify(quotes)); renderQuotes();
         }
 
-        function renderQuotes() {
-            document.getElementById('quote-history-list').innerHTML = quotes.map(q => `<div class="quote-hist"><span>${q.time} | ${q.amt}${q.cur} (${q.fee})</span><b>$${q.res}</b></div>`).join('');
-        }
-
-        function setFee(f, btn) {
-            currentFee = f;
-            document.querySelectorAll('.fee-btn').forEach(b => { b.style.background="#EEE"; b.style.color="#666"; });
-            btn.style.background = "var(--accent)"; btn.style.color = "white";
-            calcEx();
-        }
-
-        function copyNotice(ri) {
-            const o = orders[ri];
-            const items = o.items.map(i => `- ${i.name} x ${i.qty}`).join('\n');
-            const msg = `【SlowOver 出單通知】\n單號：#${o.id}\n日期：${o.date}\n電話：${o.tel}\n\n訂購項目：\n${items}\n總計金額：HKD $${o.totalPrice}\n\n💸付款方式：\n${PAY_INFO}\n\n${TERMS}`;
-            navigator.clipboard.writeText(msg); alert("✅ 完整出單通知已複製");
-        }
-
-        function copyAskInfo(ri) {
-            const msg = `【SlowOver 索取收貨資料】\n單號：#${orders[ri].id}\n訂單已準備好，請提供以下資料以便安排寄出：\n\n1. 收件人姓名：\n2. 聯絡電話：\n3. 順豐點碼 或 收件地址：\n\n感謝支持！🌻`;
-            navigator.clipboard.writeText(msg); alert("✅ 索取資料訊息已複製");
-        }
+        function renderQuotes() { document.getElementById('quote-history-list').innerHTML = quotes.map(q => `<div class="quote-hist"><span>${q.time} | ${q.amt}${q.cur} (${q.fee})</span><b>$${q.res}</b></div>`).join(''); }
+        function setFee(f, btn) { currentFee = f; document.querySelectorAll('.fee-btn').forEach(b => { b.style.background="#EEE"; b.style.color="#666"; }); btn.style.background = "var(--accent)"; btn.style.color = "white"; calcEx(); }
+        
+        function copyNotice(ri) { const o = orders[ri], items = o.items.map(i => `- ${i.name} x ${i.qty}`).join('\n'); const msg = `【SlowOver 出單通知】\n單號：#${o.id}\n日期：${o.date}\n電話：${o.tel}\n\n訂購項目：\n${items}\n總計金額：HKD $${o.totalPrice}\n\n💸付款方式：\n${PAY_INFO}\n\n${TERMS}`; navigator.clipboard.writeText(msg); alert("✅ 已複製出單通知"); }
+        function copyAskInfo(ri) { const msg = `【SlowOver 索取收貨資料】\n單號：#${orders[ri].id}\n訂單已準備好，請提供姓名、電話、順豐點碼或收件地址。🌻`; navigator.clipboard.writeText(msg); alert("✅ 已複製索取資料訊息"); }
 
         function save() { localStorage.setItem('slow_v62_data', JSON.stringify(orders)); localStorage.setItem('slow_v62_serial', serial); }
         function updStatus(ri, k) { orders[ri][k] = !orders[ri][k]; save(); render(); }
-        function updInfo(ri, k, v) { orders[ri][k] = v; save(); }
+        function updInfo(ri, k, v) { orders[ri][k] = v; save(); if(k==='address'||k==='sfNo') render(); }
         function delItem(ri, ii) { if(confirm("確定刪除此商品？")) { orders[ri].items.splice(ii,1); save(); render(); } }
         function delOrder(ri) { if(confirm("確定全單刪除？此動作不可逆！")) { orders.splice(ri,1); save(); render(); } }
-        function resetSerial() { const v = prompt("輸入單號起始值:", serial); if(v) { serial = parseInt(v); save(); } }
+        function resetSerial() { const v = prompt("單號起始:", serial); if(v) { serial = parseInt(v); save(); } }
+        
         function switchPage(p, btn) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
@@ -277,8 +294,27 @@
             if(p === 'stats') renderStats();
             if(p === 'tools') renderQuotes();
         }
-        async function syncToCloud() { try { const b = new Blob([JSON.stringify(orders)], {type:'text/plain'}); await fetch(GAS_URL, {method:'POST', body:b, mode:'no-cors'}); alert("✅ 數據已發送至雲端 (含商品詳情)"); } catch(e) { alert("上傳失敗"); } }
-        async function syncFromCloud() { try { const r = await fetch(GAS_URL); orders = await r.json(); save(); render(); alert("下載成功"); } catch(e) { alert("下載失敗"); } }
+
+        async function syncToCloud() {
+            try {
+                const blob = new Blob([JSON.stringify(orders)], {type:'text/plain'});
+                await fetch(GAS_URL, {method:'POST', body:blob, mode:'no-cors'});
+                alert("✅ 上傳指令已發出 (含 JSON 完整備份)");
+            } catch(e) { alert("上傳失敗"); }
+        }
+
+        async function syncFromCloud() {
+            if(!confirm("下載將覆蓋手機目前紀錄，確定嗎？")) return;
+            try {
+                const r = await fetch(GAS_URL);
+                const cloudData = await r.json();
+                if(Array.isArray(cloudData)) {
+                    orders = cloudData; save(); render();
+                    alert("✅ 從雲端恢復成功！");
+                }
+            } catch(e) { alert("下載失敗，請檢查 GAS 部署是否正確。"); }
+        }
+
         window.onload = () => { document.getElementById('order-date').valueAsDate = new Date(); addItemRow(); render(); };
     </script>
 </body>
