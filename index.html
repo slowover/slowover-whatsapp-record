@@ -119,25 +119,26 @@
         };
 
         // --- 同步邏輯 ---
-        async function autoPush() {
-            document.getElementById('sync-status').style.display = 'block';
-            await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ orders, nextSerial: serial }) });
-            setTimeout(() => { document.getElementById('sync-status').style.display = 'none'; }, 800);
-            document.getElementById('last-sync-time').innerText = "最後更新：" + new Date().toLocaleTimeString();
-        }
-
-        async function syncFromCloud() {
-            document.getElementById('last-sync-time').innerText = "正在從雲端下載...";
-            try {
-                const r = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const res = await r.json();
-                orders = res.orders || [];
-                serial = res.nextSerial || 300;
-                document.getElementById('next-serial').value = serial;
-                render(); renderExHistory();
-                document.getElementById('last-sync-time').innerText = "最後更新：" + new Date().toLocaleTimeString();
-            } catch (e) { document.getElementById('last-sync-time').innerText = "下載失敗"; }
-        }
+async function autoPush() {
+    const status = document.getElementById('sync-status');
+    status.style.display = 'block';
+    
+    try {
+        await fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ 
+                orders: orders, 
+                nextSerial: serial 
+            })
+        });
+        document.getElementById('last-sync-time').innerText = "最後同步：" + new Date().toLocaleTimeString();
+    } catch (e) {
+        console.error("同步失敗", e);
+    }
+    setTimeout(() => { status.style.display = 'none'; }, 800);
+}
 
         // --- 匯率邏輯 ---
         function calcEx() {
