@@ -121,15 +121,24 @@
             document.getElementById('sync-info').innerText = "最後更新：" + new Date().toLocaleTimeString();
         }
 
-        async function syncFromCloud() {
-            try {
-                const r = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const res = await r.json();
-                orders = res.orders || [];
-                serial = res.nextSerial || 300;
-                render();
-            } catch (e) { alert("同步下載失敗"); }
+   async function syncFromCloud() {
+    try {
+        const r = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const res = await r.json();
+        if(res.error) {
+            console.error("雲端回傳錯誤:", res.error);
+            return;
         }
+        orders = res.orders || [];
+        serial = res.nextSerial || 300;
+        document.getElementById('set-serial').value = serial;
+        render();
+        document.getElementById('sync-info').innerText = "最後更新：" + new Date().toLocaleTimeString();
+    } catch (e) { 
+        console.error("解析 JSON 失敗:", e);
+        document.getElementById('sync-info').innerText = "同步失敗，請檢查資料格式";
+    }
+}
 
         // --- 訂單操作 ---
         function handleSave() {
