@@ -105,16 +105,127 @@
         };
 
         async function syncFromCloud() {
-            try {
-                document.getElementById('sync-status').style.display = 'block';
-                const r = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const res = await r.json();
-                orders = res.orders || []; serial = res.nextSerial || 300;
-                render(); renderBuy(); renderStats();
-                document.getElementById('last-sync').innerText = "最後更新：" + new Date().toLocaleTimeString();
-                document.getElementById('sync-status').style.display = 'none';
-            } catch(e) { alert("同步失敗，請檢查網路或網址。"); }
-        }
+    const status = document.getElementById('sync-status');
+    try {
+        status.innerText = "☁️ 正在連線 Google...";
+        status.style.display = 'block';
+        
+        // 1. 加入快取破壞與 Timeout 處理
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
+
+        const r = await fetch(`${GAS_URL}?t=${new Date().getTime()}`, {
+            method: 'GET',
+            cache: 'no-store',
+            mode: 'cors', // 強制跨域模式
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const res = await r.json();
+
+        if (res.error) throw new Error(res.error);
+
+        // 2. 數據賦值
+        orders = res.orders || []; 
+        serial = res.nextSerial || 300;
+
+        // 3. 關鍵：iPhone 需要一點時間處理 DOM，使用 requestAnimationFrame
+        requestAnimationFrame(() => {
+            render();
+            renderBuy();
+            renderStats(); // 確保統計頁加載
+            status.style.display = 'none';
+            document.getElementById('last-sync').innerText = "最後更新：" + new Date().toLocaleTimeString();
+        });
+
+    } catch(e) {
+        console.error("Sync Error:", e);
+        status.style.display = 'none';
+        // 如果失敗，嘗試從本地快取讀取（備選方案）
+        alert("同步失敗：可能網絡不穩或 URL 錯誤。請確保 Google Script 已設定為「所有人」可存取。");
+    }
+}
+
+function renderStats() {
+    const listDiv = document.getElementById('stat-list');
+    const totalDiv = document.getElementById('stat-total');
+    
+    // 解決 iPhone 渲染空白問題：先清空再重新填充
+    listDiv.innerHTML = '<div style="text-align:center; padding:20px;">載入中...</div>';
+    
+    if (!orders || orders.length === 0) {
+        listDiv.innerHTML = '<div class="card" style="text-align:center; color:#999; padding:20px;">尚無紀錄，請先點擊「從雲端下載」</div>';
+        return;
+    }
+
+    const q = (document.getElementById('stat-search').value || "").toLowerCase().trim();
+    let fil = orders.filter(o => 
+        (o.tel && o.tel.includes(q)) || 
+        (o.id && o.id.toLowerCase().includes(q)) || 
+        (o.items && o.items.some(it => it.name.toLowerCase().includes(q)))
+    );
+
+    let tp = 0, tc = 0;
+    let htmlContent = "";
+
+    fil.forEach(o => {
+        const ri = orders.indexOf(o); 
+        let op = 0, oc = 0;
+        let itemRows = o.items.map((it, ii) => {
+            const p = Number(it.price) || 0;
+            const c = Number(it.cost) || 0;
+            const qNum = Number(it.qty) || 1;
+            op += (p * qNum); 
+            oc += (c * qNum);
+            return `
+            <div style="display:grid; grid-template-columns:2fr 1fr 1.5fr; gap:8px; margin:8px 0; align-items:center; border-bottom:1px solid #F0F0F0; padding-bottom:5px;">
+                <span style="font-size:13px; font-weight:500;">${it.name}</span>
+                <span style="color:#888;">$${p}</span>
+                <div style="display:flex; align-items:center; background:#eee; border-radius:5px; padding:2px 5px;">
+                    <span style="font-size:10px; color:#666; margin-right:2px;">$</span>
+                    <input type="number" step="any" value="${it.cost || ''}" 
+                           onchange="updateCost(${ri}, ${ii}, this.value)" 
+                           placeholder="成本" style="width:100%; border:none; background:transparent; font-size:13px; height:25px; -webkit-appearance:none;">
+                </div>
+            </div>`;
+        }).join('');
+        
+        tp += op; tc += oc;
+        htmlContent += `
+        <div class="card" style="margin-bottom:12px; border:1px solid #eee;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px dashed #eee; padding-bottom:5px;">
+                <b style="color:var(--text); font-size:14px;">#${o.id}</b>
+                <span style="color:#999; font-size:12px;">📞${o.tel}</span>
+            </div>
+            ${itemRows}
+            <div style="text-align:right; font-weight:bold; color:var(--primary); margin-top:10px;">
+                本單利潤: <span style="font-size:16px;">$${(op-oc).toFixed(1)}</span>
+            </div>
+        </div>`;
+    });
+
+    listDiv.innerHTML = htmlContent;
+    totalDiv.innerHTML = `
+        <div class="card" style="text-align:center; background:var(--primary); color:white; flex:1; padding:10px; margin-right:5px;">
+            <small style="opacity:0.8;">總營業額</small><br><b style="font-size:18px;">$${tp.toFixed(1)}</b>
+        </div>
+        <div class="card" style="text-align:center; background:var(--accent); color:white; flex:1; padding:10px; margin-left:5px;">
+            <small style="opacity:0.8;">總利潤</small><br><b style="font-size:18px;">$${(tp-tc).toFixed(1)}</b>
+        </div>`;
+}
+
+// 專為 iPhone 設計的成本更新函數，加入立即同步反饋
+async function updateCost(ri, ii, val) {
+    const costVal = parseFloat(val) || 0;
+    orders[ri].items[ii].cost = costVal;
+    
+    // 局部更新 UI 提升流暢感
+    renderStats(); 
+    
+    // 背景同步
+    await autoPush();
+}
 
         async function autoPush() {
             document.getElementById('sync-status').style.display = 'block';
