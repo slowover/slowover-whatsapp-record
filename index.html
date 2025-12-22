@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V90.0</title>
+    <title>SlowOver CRM V90.5</title>
     <style>
         :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --accent: #8EAD91; --blue: #5C7CFA; --green: #40C057; --purple: #7048E8; --red: #E03131; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -17,14 +17,17 @@
         input, select, button { width: 100%; padding: 12px; margin: 4px 0; border: 1px solid #E0D7CC; border-radius: 10px; font-size: 14px; }
         button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         button:disabled { background: #CCC; opacity: 0.5; }
-        .order-card { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; border-left: 8px solid var(--primary); border: 1px solid #EEE; }
-        .item-row { background: #FCFAf7; padding: 10px; border-radius: 10px; margin: 5px 0; border: 1px solid #F0E6D8; position: relative; }
+        .order-card { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #EEE; border-left: 8px solid var(--primary); }
+        .item-box { background: #FCFAf7; padding: 10px; border-radius: 10px; margin: 5px 0; border: 1px solid #F0E6D8; position: relative; }
         .tag { font-size: 10px; padding: 6px 12px; border-radius: 6px; display: inline-block; cursor: pointer; margin-right: 5px; margin-top: 8px; font-weight: bold; border: 1px solid #DDD; background: #FFF; color: #999; }
         .tag.active.buy { background: #FFD43B; color: #856404; border-color: #FFD43B; }
         .tag.active.arr { background: var(--blue); color: white; border-color: var(--blue); }
-        .status-badge { font-size: 11px; font-weight: bold; color: var(--purple); margin-top: 5px; display: block; }
+        .st-btn { font-size: 10px; padding: 10px 0; border-radius: 8px; background: #F8F9FA; color: #BBB; border: 1px solid #EEE; text-align: center; font-weight: bold; cursor: pointer; }
+        .st-btn.active.paid { background: var(--green); color: white; border-color: var(--green); }
+        .st-btn.active.ship { background: var(--blue); color: white; border-color: var(--blue); }
+        .status-text { font-size: 11px; font-weight: bold; color: var(--purple); margin: 5px 0; display: block; }
         #sync-status { position: fixed; top: 15px; right: 15px; font-size: 10px; background: var(--text); color: white; padding: 5px 12px; border-radius: 20px; display: none; z-index: 2000; }
-        .del-btn { position: absolute; top: 5px; right: 5px; color: red; font-size: 12px; cursor: pointer; }
+        .del-x { position: absolute; top: 5px; right: 8px; color: #CCC; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -42,24 +45,24 @@
         <div class="card">
             <h3 style="margin:0;">📝 新增訂單</h3>
             <input type="date" id="order-date">
-            <input type="tel" id="cust-tel" placeholder="客戶電話 (WhatsApp)">
-            <div id="items-entry"></div>
-            <button onclick="addItemRow()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC; margin-top:10px;">+ 商品項目</button>
-            <button id="btn-save" onclick="handleSave()" style="height:55px; margin-top:15px; background:var(--accent); font-size:16px;">💾 儲存訂單 (需等待5秒)</button>
+            <input type="tel" id="cust-tel" placeholder="客戶電話">
+            <div id="new-items-area"></div>
+            <button onclick="addNewEntry()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC; margin-top:10px;">+ 商品項目</button>
+            <button id="save-btn" onclick="saveOrder()" style="height:55px; margin-top:15px; background:var(--accent); font-size:16px;">💾 儲存訂單</button>
         </div>
         <div id="list-container"></div>
     </div>
 
     <div id="page-buy" class="page">
-        <div class="card" id="buy-content"></div>
+        <div class="card" id="buy-list"></div>
     </div>
 
     <div id="page-stats" class="page">
         <div class="card">
-            <input type="text" id="stat-search" placeholder="搜尋電話/商品/單號..." oninput="renderStats()">
+            <input type="text" id="q-search" placeholder="搜尋電話/單號/商品..." oninput="renderStats()">
             <div style="display:flex; gap:5px;">
-                <input type="date" id="date-start" onchange="renderStats()">
-                <input type="date" id="date-end" onchange="renderStats()">
+                <input type="date" id="q-start" onchange="renderStats()">
+                <input type="date" id="q-end" onchange="renderStats()">
             </div>
         </div>
         <div id="stats-summary" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;"></div>
@@ -68,235 +71,187 @@
 
     <div id="page-tools" class="page">
         <div class="card">
-            <h3>☁️ 數據同步</h3>
-            <p id="sync-info" style="font-size:12px; color:#999;">最後更新：尚未同步</p>
-            <button onclick="syncFromCloud()" style="background:var(--blue);">🔄 從雲端下載最新數據</button>
+            <h3>☁️ 同步中心</h3>
+            <p id="last-sync" style="font-size:12px; color:#999;">尚未同步</p>
+            <button onclick="syncFromCloud()" style="background:var(--blue);">🔄 從雲端下載數據</button>
         </div>
         <div class="card">
-            <h3>💰 匯率助手 (XE 半年平均)</h3>
+            <h3>💰 匯率助手 (加收 3%/5% 手續費)</h3>
             <div style="display:flex; gap:5px;">
-                <select id="ex-cur" onchange="calcEx()" style="flex:1">
-                    <option value="0.00585">KRW 韓幣 (0.00585)</option>
-                    <option value="0.0525">JPY 日幣 (0.0525)</option>
-                    <option value="0.222">THB 泰幣 (0.222)</option>
+                <select id="ex-rate" onchange="calcEx()" style="flex:1">
+                    <option value="0.00585">韓幣 KRW (0.00585)</option>
+                    <option value="0.0525">日幣 JPY (0.0525)</option>
+                    <option value="0.222">泰幣 THB (0.222)</option>
                 </select>
                 <select id="ex-fee" onchange="calcEx()" style="flex:0.6">
                     <option value="1.03">+3% 手續費</option>
                     <option value="1.05">+5% 手續費</option>
                 </select>
             </div>
-            <input type="number" id="ex-amt" placeholder="輸入外幣金額" oninput="calcEx()">
+            <input type="number" id="ex-val" placeholder="輸入外幣金額" oninput="calcEx()">
             <div id="ex-res" style="font-size:32px; text-align:center; color:var(--primary); font-weight:bold; margin:10px 0;">$0.00</div>
-            <button onclick="saveEx()" style="background:var(--accent); font-size:12px;">📌 紀錄報價</button>
-            <div id="ex-history"></div>
+            <button onclick="addExLog()" style="background:var(--accent); font-size:12px;">📌 紀錄最近紀錄</button>
+            <div id="ex-logs" style="max-height:150px; overflow-y:auto; font-size:11px; margin-top:10px; border-top:1px solid #EEE; padding-top:5px;"></div>
         </div>
         <div class="card">
-            <h3>🔢 序號設定</h3>
-            <input type="number" id="set-serial" placeholder="自訂起始單號">
-            <button onclick="serial=parseInt(document.getElementById('set-serial').value); autoPush(); alert('已重設單號')" style="background:#666;">重設訂單序號</button>
+            <h3>🔢 單號管理</h3>
+            <input type="number" id="manual-serial" placeholder="設定起始單號">
+            <button onclick="serial=parseInt(document.getElementById('manual-serial').value); autoPush(); alert('單號已重設')" style="background:#666;">重設序號</button>
         </div>
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxPku0qTD-XQvctzBYfHQNflwBn0QH-WjwTzPwfWMDsyMvym94i0f-MlXtUbHpEjJZaRA/exec"; // <--- 請填入網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxPku0qTD-XQvctzBYfHQNflwBn0QH-WjwTzPwfWMDsyMvym94i0f-MlXtUbHpEjJZaRA/exec"; 
         const PAY_INFO = `💸付款方式：\nPayMe：\nhttps://qr.payme.hsbc.com.hk/2/Ui316pJ5T8b428yzTSbr4J\n\n快速支付系統識別碼FPS ID：105249023\n名稱：slow over\n\n⚠️ 注意事項：\n24小時內完成付款並回傳入數截圖\n截圖請備註電話號碼以便對賬`;
         const TERMS = `下單即同意以下條款：\n1. 24小時內完成付款並回傳入數截圖。\n2. 截圖請備註或訊息電話號碼以便對賬。\n3. 訂單一經確認，不設取消、退換或更改。\n4. 如遇商品缺貨，將會全數退款。\n5. 一般預訂需時 7-30 個工作天，不接急單。\n6. 運送過程如有損壞風險需由買家承擔。\n7. SLOWOVER 保留最終決定權。感謝支持 SLOWOVER！`;
 
-        let orders = [];
-        let serial = 300;
-        let exLog = JSON.parse(localStorage.getItem('slow_ex_log')) || [];
+        let orders = []; let serial = 300; let exHistory = JSON.parse(localStorage.getItem('slow_ex_logs')) || [];
 
         window.onload = async () => {
             document.getElementById('order-date').valueAsDate = new Date();
-            addItemRow();
-            await syncFromCloud();
-            renderEx();
+            addNewEntry(); await syncFromCloud(); renderExLogs();
         };
 
-        // --- 同步邏輯 ---
         async function autoPush() {
             document.getElementById('sync-status').style.display = 'block';
             await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ orders, nextSerial: serial }) });
             setTimeout(() => { document.getElementById('sync-status').style.display = 'none'; }, 800);
-            document.getElementById('sync-info').innerText = "最後更新：" + new Date().toLocaleTimeString();
+            document.getElementById('last-sync').innerText = "最後同步：" + new Date().toLocaleTimeString();
         }
 
-   async function syncFromCloud() {
-    try {
-        const r = await fetch(`${GAS_URL}?t=${Date.now()}`);
-        const res = await r.json();
-        if(res.error) {
-            console.error("雲端回傳錯誤:", res.error);
-            return;
+        async function syncFromCloud() {
+            try {
+                const r = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const res = await r.json();
+                orders = res.orders || []; serial = res.nextSerial || 300; render();
+            } catch(e) { alert("同步失敗，請檢查網路或GAS網址"); }
         }
-        orders = res.orders || [];
-        serial = res.nextSerial || 300;
-        document.getElementById('set-serial').value = serial;
-        render();
-        document.getElementById('sync-info').innerText = "最後更新：" + new Date().toLocaleTimeString();
-    } catch (e) { 
-        console.error("解析 JSON 失敗:", e);
-        document.getElementById('sync-info').innerText = "同步失敗，請檢查資料格式";
-    }
-}
 
-        // --- 訂單操作 ---
-        function handleSave() {
+        function saveOrder() {
             const tel = document.getElementById('cust-tel').value.trim();
-            if(!tel) return alert("電話不能為空");
-            
-            const btn = document.getElementById('btn-save');
+            if(!tel) return alert("請填入電話");
+            const btn = document.getElementById('save-btn');
             btn.disabled = true;
-            
+
             let its = [];
             document.querySelectorAll('.entry-row').forEach(row => {
-                const name = row.querySelector('.in-n').value;
+                const n = row.querySelector('.in-n').value;
                 const p = parseFloat(row.querySelector('.in-p').value) || 0;
                 const q = parseInt(row.querySelector('.in-q').value) || 1;
-                if(name) its.push({ name, price: p, qty: q, cost: 0, bought: false, arrived: false });
+                if(n) its.push({ name: n, price: p, qty: q, cost: 0, bought: false, arrived: false });
             });
 
             const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
             const id = `WS${new Date().getFullYear().toString().slice(-2)}${months[new Date().getMonth()]}${serial}`;
             
             orders.push({ id, date: document.getElementById('order-date').value, tel, items: its, paid: false, shipped: false, refunded: false, address: "" });
-            serial++;
-            
-            render();
-            autoPush();
+            serial++; render(); autoPush();
 
-            // 五秒倒數
-            let sec = 5;
+            let countdown = 5;
             const timer = setInterval(() => {
-                sec--;
-                btn.innerText = `請稍候 (${sec}s)...`;
-                if(sec <= 0) {
-                    clearInterval(timer);
-                    btn.disabled = false;
-                    btn.innerText = "💾 儲存訂單 (需等待5秒)";
-                }
+                btn.innerText = `儲存中 (${countdown}s)...`;
+                if(--countdown < 0) { clearInterval(timer); btn.disabled = false; btn.innerText = "💾 儲存訂單"; }
             }, 1000);
 
-            // 清空 UI
-            document.getElementById('cust-tel').value = "";
-            document.getElementById('items-entry').innerHTML = "";
-            addItemRow();
+            document.getElementById('cust-tel').value = ""; document.getElementById('new-items-area').innerHTML = ""; addNewEntry();
         }
 
         function render() {
-            const list = document.getElementById('list-container');
-            list.innerHTML = orders.slice().reverse().map((o, i) => {
-                const rIdx = orders.length - 1 - i;
-                const allBuy = o.items.every(it => it.bought);
-                const allArr = o.items.every(it => it.arrived);
+            const container = document.getElementById('list-container');
+            container.innerHTML = orders.slice().reverse().map((o, idx) => {
+                const rIdx = orders.length - 1 - idx;
+                const allB = o.items.length > 0 && o.items.every(it => it.bought);
+                const allA = o.items.length > 0 && o.items.every(it => it.arrived);
                 
-                let badge = "";
-                if(allArr) badge = "全部已到港，未寄出";
-                else if(allBuy) badge = "已買齊，未到港";
-                if(o.address) badge = "已寄出";
+                let stTxt = "";
+                if(o.address) stTxt = "已寄出";
+                else if(allA) stTxt = "全部已到港，未寄出";
+                else if(allB) stTxt = "已買齊，未到港";
 
                 return `
                 <div class="order-card">
-                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span>#${o.id}</span><span>${o.date}</span></div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px;"><span>#${o.id}</span><span>${o.date}</span></div>
                     <strong style="font-size:16px;">📞 ${o.tel}</strong>
-                    <span class="status-badge">${badge}</span>
+                    <span class="status-text">${stTxt}</span>
                     ${o.items.map((it, ii) => `
-                        <div class="item-row">
-                            <span class="del-btn" onclick="orders[${rIdx}].items.splice(${ii},1); render(); autoPush();">✖️</span>
-                            <div>${it.name} x${it.qty} ($${it.price})</div>
-                            <span class="tag buy ${it.bought?'active':''}" onclick="toggleTag(${rIdx},${ii},'bought')">${it.bought?'已買':'未買'}</span>
-                            <span class="tag arr ${it.arrived?'active':''}" onclick="toggleTag(${rIdx},${ii},'arrived')">${it.arrived?'已到港':'未到'}</span>
+                        <div class="item-box">
+                            <span class="del-x" onclick="orders[${rIdx}].items.splice(${ii},1); render(); autoPush();">×</span>
+                            <div style="font-size:14px;">${it.name} x${it.qty} ($${it.price})</div>
+                            <span class="tag buy ${it.bought?'active':''}" onclick="toggleIt(${rIdx},${ii},'bought')">${it.bought?'已買':'未買'}</span>
+                            <span class="tag arr ${it.arrived?'active':''}" onclick="toggleIt(${rIdx},${ii},'arrived')">${it.arrived?'已到港':'未到'}</span>
                         </div>
                     `).join('')}
-                    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-top:10px;">
-                        <div class="st-btn ${o.paid?'active paid':''}" onclick="updO(${rIdx},'paid')">已付</div>
-                        <div class="st-btn" style="background:${allArr? 'var(--purple)':'#F8F9FA'}; color:${allArr?'#FFF':'#BBB'}">齊</div>
-                        <div class="st-btn ${o.shipped?'active ship':''}" onclick="updO(${rIdx},'shipped')">寄出</div>
-                        <div class="st-btn ${o.refunded?'active':''}" onclick="updO(${rIdx},'refunded')" style="color:${o.refunded?'white':'red'}; background:${o.refunded?'red':''}">退款</div>
+                    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:10px;">
+                        <div class="st-btn paid ${o.paid?'active':''}" onclick="updO(${rIdx},'paid')">已付款</div>
+                        <div class="st-btn" style="background:${allA?'var(--purple)':'#F8F9FA'}; color:${allA?'white':'#BBB'}">全到港</div>
+                        <div class="st-btn ship ${o.shipped?'active':''}" onclick="updO(${rIdx},'shipped')">已寄出</div>
+                        <div class="st-btn" onclick="updO(${rIdx},'refunded')" style="color:${o.refunded?'white':'red'}; background:${o.refunded?'red':''}">已退款</div>
                     </div>
-                    <input type="text" placeholder="登記運單號 / 順豐點碼" value="${o.address}" onchange="orders[${rIdx}].address=this.value; render(); autoPush();" style="font-size:12px; margin-top:10px;">
-                    <div style="display:flex; gap:5px;">
+                    <input type="text" placeholder="順豐點碼 / 運單號" value="${o.address}" onchange="orders[${rIdx}].address=this.value; render(); autoPush();" style="margin-top:10px; font-size:12px;">
+                    <div style="display:flex; gap:5px; margin-top:8px;">
                         <button onclick="copyBill(${rIdx})" style="flex:1; font-size:12px; background:var(--accent);">📋 出單通知</button>
                         <button onclick="copyAddr(${rIdx})" style="flex:1; font-size:12px; background:var(--purple);">📋 索取資料</button>
                     </div>
-                    <button onclick="if(confirm('全單刪除？')){orders.splice(${rIdx},1); render(); autoPush();}" style="background:none; color:#CCC; font-size:10px; margin-top:10px;">🗑️ 全單刪除</button>
+                    <button onclick="if(confirm('確定全單刪除？')){orders.splice(${rIdx},1); render(); autoPush();}" style="background:none; color:#CCC; font-size:10px; margin-top:10px;">🗑️ 全單刪除</button>
                 </div>`;
             }).join('');
         }
 
-        // --- 採購清單 ---
         function renderBuy() {
             let map = {};
             orders.forEach(o => o.items.forEach(it => {
-                if(!map[it.name]) map[it.name] = { total: 0, bought: 0 };
-                map[it.name].total += it.qty;
-                if(it.bought) map[it.name].bought += it.qty;
+                if(!map[it.name]) map[it.name] = { t: 0, b: 0 };
+                map[it.name].t += it.qty; if(it.bought) map[it.name].b += it.qty;
             }));
-            let html = "<h3>🛍️ 採購清單</h3>";
-            for(let name in map) {
-                const color = map[name].bought >= map[name].total ? 'var(--accent)' : 'var(--red)';
-                html += `<div style="padding:10px; border-bottom:1px solid #EEE;">
-                    <b style="font-size:16px;">${name}</b><br>
-                    <span style="color:${color}">已買: ${map[name].bought} / 總需求: ${map[name].total}</span>
+            let html = "<h3>🛍️ 採購清單 (不消失)</h3>";
+            for(let k in map) {
+                const done = map[k].b >= map[k].t;
+                html += `<div style="padding:10px; border-bottom:1px solid #EEE; background:${done?'#F8F9FA':''} ">
+                    <b>${k}</b><br>
+                    <span style="color:${done?'var(--accent)':'var(--red)'}">已買: ${map[k].b} / 總需求: ${map[k].t}</span>
                 </div>`;
             }
-            document.getElementById('buy-content').innerHTML = html;
+            document.getElementById('buy-list').innerHTML = html;
         }
 
-        // --- 統計頁面 ---
         function renderStats() {
-            const key = document.getElementById('stat-search').value.toLowerCase();
-            const s = document.getElementById('date-start').value;
-            const e = document.getElementById('date-end').value;
-            
+            const key = document.getElementById('q-search').value.toLowerCase();
+            const start = document.getElementById('q-start').value;
+            const end = document.getElementById('q-end').value;
             let filtered = orders.filter(o => {
-                const matchKey = o.tel.includes(key) || o.id.toLowerCase().includes(key) || o.items.some(it => it.name.toLowerCase().includes(key));
-                const matchDate = (!s || o.date >= s) && (!e || o.date <= e);
-                return matchKey && matchDate;
+                const mK = o.tel.includes(key) || o.id.toLowerCase().includes(key) || o.items.some(it => it.name.toLowerCase().includes(key));
+                const mD = (!start || o.date >= start) && (!end || o.date <= end);
+                return mK && mD;
             });
-
-            let tP = 0, tC = 0;
-            const list = document.getElementById('stats-list');
-            list.innerHTML = filtered.map((o, i) => {
+            let totalP = 0, totalC = 0;
+            document.getElementById('stats-list').innerHTML = filtered.map(o => {
                 const rIdx = orders.indexOf(o);
                 let oP = 0, oC = 0;
-                o.items.forEach(it => { oP += (it.price * it.qty); oC += (it.cost * it.qty); });
-                tP += oP; tC += oC;
-                return `
-                <div class="card" style="font-size:12px;">
-                    <b>#${o.id} | ${o.tel}</b><br>
-                    ${o.items.map((it, ii) => `
-                        <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px; margin:5px 0;">
-                            <span>${it.name}</span>
-                            <span style="color:#999">$${it.price}</span>
-                            <input type="number" value="${it.cost}" onchange="orders[${rIdx}].items[${ii}].cost=parseFloat(this.value); renderStats(); autoPush();" placeholder="成本" style="padding:2px; height:24px;">
-                        </div>
-                    `).join('')}
-                    <div style="text-align:right; font-weight:bold; color:var(--primary);">利潤: $${(oP - oC).toFixed(1)}</div>
-                </div>`;
+                const rows = o.items.map((it, ii) => {
+                    oP += (it.price * it.qty); oC += (it.cost * it.qty);
+                    return `<div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:5px; margin:4px 0;">
+                        <span>${it.name}</span><span style="color:#999">$${it.price}</span>
+                        <input type="number" value="${it.cost}" onchange="orders[${rIdx}].items[${ii}].cost=parseFloat(this.value); renderStats(); autoPush();" placeholder="成本" style="padding:2px; height:24px;">
+                    </div>`;
+                }).join('');
+                totalP += oP; totalC += oC;
+                return `<div class="card" style="font-size:12px;"><b>#${o.id} | ${o.tel}</b>${rows}<div style="text-align:right; font-weight:bold; color:var(--primary);">利潤: $${(oP-oC).toFixed(1)}</div></div>`;
             }).join('');
-
-            document.getElementById('stats-summary').innerHTML = `
-                <div class="card" style="text-align:center; background:var(--primary); color:white;">營業額<br><b>$${tP.toFixed(1)}</b></div>
-                <div class="card" style="text-align:center; background:var(--accent); color:white;">總利潤<br><b>$${(tP - tC).toFixed(1)}</b></div>
-            `;
+            document.getElementById('stats-summary').innerHTML = `<div class="card" style="text-align:center; background:var(--primary); color:white;">營業額<br><b>$${totalP.toFixed(1)}</b></div><div class="card" style="text-align:center; background:var(--accent); color:white;">總利潤<br><b>$${(totalP-totalC).toFixed(1)}</b></div>`;
         }
 
-        // --- 輔助函數 ---
-        function toggleTag(oi, ii, k) { orders[oi].items[ii][k] = !orders[oi].items[ii][k]; render(); autoPush(); }
+        function toggleIt(oi, ii, k) { orders[oi].items[ii][k] = !orders[oi].items[ii][k]; render(); autoPush(); }
         function updO(oi, k) { orders[oi][k] = !orders[oi][k]; render(); autoPush(); }
-        function addItemRow() {
-            const div = document.createElement('div');
-            div.className = 'entry-row';
+        function addNewEntry() {
+            const div = document.createElement('div'); div.className = 'entry-row';
             div.innerHTML = `<div style="display:flex; gap:5px;"><input type="text" class="in-n" placeholder="商品名" style="flex:2"><input type="number" class="in-q" value="1" style="flex:0.5"><input type="number" class="in-p" placeholder="售價" style="flex:1"></div>`;
-            document.getElementById('items-entry').appendChild(div);
+            document.getElementById('new-items-area').appendChild(div);
         }
         function switchPage(p, btn) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
             document.getElementById('page-'+p).classList.add('active'); btn.classList.add('active');
-            if(p === 'buy') renderBuy();
-            if(p === 'stats') renderStats();
+            if(p === 'buy') renderBuy(); if(p === 'stats') renderStats();
         }
         function copyBill(idx) {
             const o = orders[idx];
@@ -306,23 +261,18 @@
         function copyAddr(idx) {
             const o = orders[idx];
             const txt = `【SlowOver 收貨資料登記】\n單號：#${o.id}\n貨品已齊備，請提供以下資料以便寄出：\n\n收件人姓名：\n收件人電話：\n順豐站/智能櫃編號及地址：\n\n感謝支持！🌻`;
-            navigator.clipboard.writeText(txt).then(() => alert("索取資料信息已複製"));
+            navigator.clipboard.writeText(txt).then(() => alert("登記信息已複製"));
         }
         function calcEx() {
-            const r = document.getElementById('ex-cur').value;
-            const f = document.getElementById('ex-fee').value;
-            const a = document.getElementById('ex-amt').value;
+            const r = document.getElementById('ex-rate').value; const f = document.getElementById('ex-fee').value; const a = document.getElementById('ex-val').value;
             document.getElementById('ex-res').innerText = a > 0 ? `$${(a * r * f).toFixed(2)}` : "$0.00";
         }
-        function saveEx() {
-            const res = document.getElementById('ex-res').innerText;
-            if(res === "$0.00") return;
-            exLog.unshift(`[${new Date().toLocaleTimeString()}] ${res}`);
-            if(exLog.length > 30) exLog.pop();
-            localStorage.setItem('slow_ex_log', JSON.stringify(exLog));
-            renderEx();
+        function addExLog() {
+            const res = document.getElementById('ex-res').innerText; if(res === "$0.00") return;
+            exHistory.unshift(`[${new Date().toLocaleTimeString()}] ${res}`); if(exHistory.length > 30) exHistory.pop();
+            localStorage.setItem('slow_ex_logs', JSON.stringify(exHistory)); renderExLogs();
         }
-        function renderEx() { document.getElementById('ex-history').innerHTML = exLog.map(l => `<div style="font-size:11px; padding:4px; border-bottom:1px solid #EEE;">${l}</div>`).join(''); }
+        function renderExLogs() { document.getElementById('ex-logs').innerHTML = exHistory.map(l => `<div>${l}</div>`).join(''); }
     </script>
 </body>
 </html>
