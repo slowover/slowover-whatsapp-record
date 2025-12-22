@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V89.5</title>
+    <title>SlowOver CRM V89.7</title>
     <style>
         :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --accent: #8EAD91; --blue: #5C7CFA; --green: #40C057; --purple: #7048E8; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, system-ui; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 100px 15px; }
+        body { font-family: -apple-system, system-ui; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 120px 15px; }
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #EEE; z-index: 1000; }
         .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 11px; color: #999; font-weight: bold; cursor: pointer; }
         .nav-item.active { color: var(--primary); }
@@ -17,7 +17,7 @@
         input, select, button { width: 100%; padding: 12px; margin: 4px 0; border: 1px solid #E0D7CC; border-radius: 10px; font-size: 14px; }
         button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         .order-card { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #EEE; border-left: 8px solid var(--primary); }
-        .item-box { background: #FCFAf7; padding: 12px; border-radius: 12px; margin: 8px 0; border: 1px solid #F0E6D8; position: relative; }
+        .item-box { background: #FCFAf7; padding: 12px; border-radius: 12px; margin: 8px 0; border: 1px solid #F0E6D8; }
         .st-btn { font-size: 10px; padding: 10px 0; border-radius: 8px; background: #F8F9FA; color: #BBB; border: 1px solid #EEE; text-align: center; font-weight: bold; cursor: pointer; }
         .st-btn.active.paid { background: var(--green); color: white; border-color: var(--green); }
         .st-btn.active.ship { background: var(--blue); color: white; border-color: var(--blue); }
@@ -43,10 +43,10 @@
         <div class="card">
             <h3 style="margin:0;">📝 新增訂單</h3>
             <input type="date" id="order-date">
-            <input type="tel" id="cust-tel" placeholder="客戶電話">
+            <input type="tel" id="cust-tel" placeholder="客戶電話 (WhatsApp)">
             <div id="new-items-container"></div>
-            <button onclick="addNewItemField()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC; margin-top:10px;">+ 新增商品項目</button>
-            <button onclick="handleSaveAction()" style="height:55px; margin-top:15px; background:var(--accent); font-size:16px;">💾 儲存並同步雲端</button>
+            <button onclick="addNewItemField()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC; margin-top:10px;">+ 商品項目</button>
+            <button onclick="handleSaveAction()" style="height:55px; margin-top:15px; background:var(--accent); font-size:16px;">💾 儲存訂單</button>
         </div>
         <div id="list-container"></div>
     </div>
@@ -62,24 +62,25 @@
 
     <div id="page-tools" class="page">
         <div class="card">
-            <h3>☁️ 同步狀態</h3>
-            <p id="last-sync-time" style="font-size:12px; color:#999;">讀取中...</p>
-            <button onclick="syncFromCloud()" style="background:var(--blue);">🔄 強制刷新</button>
+            <h3>☁️ 同步與數據</h3>
+            <p id="last-sync-time" style="font-size:12px; color:#999;">尚未更新</p>
+            <button onclick="syncFromCloud()" style="background:var(--blue);">🔄 強制刷新雲端數據</button>
         </div>
         <div class="card">
             <h3>💰 匯率助手</h3>
             <div style="display:flex; gap:5px;">
-                <select id="cur-sel" onchange="calcEx()" style="flex:1"><option value="KRW">韓幣(0.00585)</option><option value="JPY">日幣(0.0525)</option><option value="THB">泰幣(0.222)</option></select>
+                <select id="cur-sel" onchange="calcEx()" style="flex:1"><option value="KRW">韓幣 (0.00585)</option><option value="JPY">日幣 (0.0525)</option><option value="THB">泰幣 (0.222)</option></select>
                 <input type="number" id="fee-custom" value="3" oninput="calcEx()" style="flex:0.5; text-align:center;">
             </div>
-            <input type="number" id="ex-in" placeholder="輸入金額" oninput="calcEx()">
+            <input type="number" id="ex-in" placeholder="輸入外幣金額" oninput="calcEx()">
             <div id="ex-res" style="font-size:30px; text-align:center; color:var(--primary); font-weight:bold; margin:10px 0;">$0.00</div>
-            <button onclick="saveExHistory()" style="background:var(--accent); font-size:12px;">📌 紀錄結果</button>
+            <button onclick="saveExHistory()" style="background:var(--accent); font-size:12px;">📌 紀錄紀錄</button>
             <div id="ex-history"></div>
         </div>
         <div class="card">
-            <h3>🔢 單號修正</h3>
-            <div style="display:flex; gap:5px;"><input type="number" id="next-serial" style="margin:0;"><button onclick="updateSerial()" style="width:80px; background:#666;">修正</button></div>
+            <h3>🔢 序號管理</h3>
+            <input type="number" id="next-serial">
+            <button onclick="updateSerial()" style="background:#666;">修正起始序號</button>
         </div>
     </div>
 
@@ -99,7 +100,7 @@
             document.getElementById('sync-status').style.display = 'block';
             await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ orders, nextSerial: serial }) });
             setTimeout(() => { document.getElementById('sync-status').style.display = 'none'; }, 800);
-            document.getElementById('last-sync-time').innerText = "最後更新：" + new Date().toLocaleTimeString();
+            document.getElementById('last-sync-time').innerText = "最後同步：" + new Date().toLocaleTimeString();
         }
 
         async function syncFromCloud() {
@@ -108,8 +109,8 @@
                 const res = await r.json();
                 orders = res.orders || []; serial = res.nextSerial || 300;
                 document.getElementById('next-serial').value = serial;
-                render(); document.getElementById('last-sync-time').innerText = "最後更新：" + new Date().toLocaleTimeString();
-            } catch (e) { alert("同步失敗"); }
+                render(); document.getElementById('last-sync-time').innerText = "最後同步：" + new Date().toLocaleTimeString();
+            } catch (e) { console.error("Sync error"); }
         }
 
         function handleSaveAction() {
@@ -129,7 +130,6 @@
             orders.push({id, date, tel, items:its, totalPrice:tp, totalCost:0, paid:false, shipped:false, address:""});
             serial++; render(); autoPush();
             document.getElementById('cust-tel').value = ""; document.getElementById('new-items-container').innerHTML = ""; addNewItemField();
-            document.getElementById('next-serial').value = serial;
         }
 
         function render() {
@@ -142,7 +142,7 @@
                     <strong>📞 ${o.tel}</strong>
                     ${o.items.map((it, ii) => `
                         <div class="item-box">
-                            <div style="font-size:13px;">${it.name} x${it.qty}</div>
+                            <div style="font-size:13px;">${it.name} x${it.qty} ($${it.price})</div>
                             <div class="tag buy ${it.bought?'active':''}" onclick="toggleTag(${rIdx}, ${ii}, 'bought')">${it.bought?'已買':'未買'}</div>
                             <div class="tag arr ${it.arrived?'active':''}" onclick="toggleTag(${rIdx}, ${ii}, 'arrived')">${it.arrived?'到港':'未到'}</div>
                         </div>`).join('')}
@@ -150,12 +150,12 @@
                         <div class="st-btn paid ${o.paid?'active':''}" onclick="updStat(${rIdx},'paid')">付</div>
                         <div class="st-btn" style="background:${allArr?'var(--purple)':'#F8F9FA'}; color:${allArr?'white':'#BBB'}">齊</div>
                         <div class="st-btn ship ${o.shipped?'active':''}" onclick="updStat(${rIdx},'shipped')">寄</div>
-                        <div class="st-btn" onclick="if(confirm('刪除？')){orders.splice(${rIdx},1);render();autoPush();}">🗑️</div>
+                        <div class="st-btn" onclick="if(confirm('確定刪除？')){orders.splice(${rIdx},1);render();autoPush();}" style="color:red">🗑️</div>
                     </div>
-                    <input type="text" placeholder="運單號/地址" value="${o.address||''}" onchange="updInfo(${rIdx},'address',this.value)" style="font-size:11px; margin-top:10px; padding:8px;">
+                    <input type="text" placeholder="地址 / 運單號" value="${o.address||''}" onchange="updInfo(${rIdx},'address',this.value)" style="font-size:11px; margin-top:10px; padding:8px;">
                     <div style="display:flex; gap:5px; margin-top:8px;">
-                        <button onclick="copyMsg(${rIdx}, 'bill')" style="font-size:11px; flex:1; background:var(--accent);">📋 通知</button>
-                        <button onclick="copyMsg(${rIdx}, 'req')" style="font-size:11px; flex:1; background:var(--purple);">📋 索資</button>
+                        <button onclick="copyMsg(${rIdx}, 'bill')" style="font-size:11px; flex:1; background:var(--accent);">📋 付款通知</button>
+                        <button onclick="copyMsg(${rIdx}, 'req')" style="font-size:11px; flex:1; background:var(--purple);">📋 索取資料</button>
                     </div>
                 </div>`;
             }).join('');
@@ -209,9 +209,9 @@
         function copyMsg(idx, type) {
             const o = orders[idx];
             let txt = type === 'bill' ? `【SlowOver 出單通知】\n單號：#${o.id}\n電話：${o.tel}\n\n項目：\n${o.items.map(i=>`- ${i.name} x ${i.qty}`).join('\n')}\n總計：HKD $${o.totalPrice}\n\n${PAY_MSG}\n\n${TERMS}` : `【SlowOver 索取資料】\n單號：#${o.id}\n貨已齊備，請提供收件資料。🌻`;
-            navigator.clipboard.writeText(txt).then(() => alert("✅ 已複製"));
+            navigator.clipboard.writeText(txt).then(() => alert("✅ 已複製內容"));
         }
-        function updateSerial() { serial = parseInt(document.getElementById('next-serial').value); autoPush(); alert("✅ 單號已修正"); }
+        function updateSerial() { serial = parseInt(document.getElementById('next-serial').value); autoPush(); alert("✅ 起始序號已更新"); }
         function calcEx() {
             const amt = document.getElementById('ex-in').value; const rate = { KRW: 0.00585, JPY: 0.0525, THB: 0.222 }[document.getElementById('cur-sel').value];
             const fee = 1 + (parseFloat(document.getElementById('fee-custom').value || 0) / 100);
