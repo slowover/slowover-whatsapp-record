@@ -3,29 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V91.18</title>
+    <title>SlowOver CRM V91.22</title>
     <style>
-        :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --accent: #8EAD91; --blue: #5C7CFA; --green: #40C057; --purple: #7048E8; --red: #E03131; }
+        :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --accent: #8EAD91; --blue: #5C7CFA; --green: #40C057; --red: #E03131; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, system-ui; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 120px 15px; }
-        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #EEE; z-index: 1000; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 120px 15px; }
+        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; border-top: 1px solid #EEE; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { flex: 1; padding: 18px 0; text-align: center; font-size: 11px; color: #999; font-weight: bold; }
         .nav-item.active { color: var(--primary); }
-        .card { background: white; padding: 15px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 12px; }
+        .card { background: white; padding: 15px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 12px; position: relative; }
         .page { display: none; max-width: 600px; margin: 0 auto; }
         .page.active { display: block; }
-        input, select, button { width: 100%; padding: 14px; margin: 4px 0; border: 1px solid #E0D7CC; border-radius: 10px; font-size: 14px; -webkit-appearance: none; }
+        input, select, button { width: 100%; padding: 14px; margin: 5px 0; border: 1px solid #E0D7CC; border-radius: 10px; font-size: 14px; }
         button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
-        .order-card { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #EEE; border-left: 8px solid var(--primary); position: relative; }
-        .del-btn { position: absolute; top: 10px; right: 10px; color: var(--red); padding: 5px 10px; font-weight: bold; font-size: 20px; cursor: pointer; }
+        .order-card { border-left: 8px solid var(--primary); }
+        .del-btn { position: absolute; top: 12px; right: 12px; color: var(--red); font-size: 22px; cursor: pointer; font-weight: bold; }
         .tag { font-size: 10px; padding: 8px 12px; border-radius: 6px; display: inline-block; cursor: pointer; margin-right: 5px; margin-top: 8px; font-weight: bold; border: 1px solid #DDD; background: #FFF; }
-        .tag.active.buy { background: #FFD43B; color: #856404; border-color: #FFD43B; }
-        .tag.active.arr { background: var(--blue); color: white; border-color: var(--blue); }
-        .st-btn { font-size: 11px; padding: 12px 0; border-radius: 10px; background: #F8F9FA; color: #BBB; border: 1px solid #EEE; text-align: center; font-weight: bold; }
+        .tag.active.buy { background: #FFD43B; border-color: #FFD43B; color: #856404; }
+        .tag.active.arr { background: var(--blue); border-color: var(--blue); color: white; }
+        .st-btn { flex: 1; padding: 12px 0; border-radius: 10px; background: #F8F9FA; color: #BBB; border: 1px solid #EEE; text-align: center; font-weight: bold; font-size: 11px; }
         .st-btn.active.paid { background: var(--green); color: white; border-color: var(--green); }
         .st-btn.active.ship { background: var(--blue); color: white; border-color: var(--blue); }
         .st-btn.active.refund { background: var(--red); color: white; border-color: var(--red); }
-        .log-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F1F1F1; font-size: 13px; }
         #sync-status { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 8px 15px; border-radius: 20px; font-size: 11px; display: none; z-index: 2000; }
     </style>
 </head>
@@ -47,7 +46,7 @@
             <input type="tel" id="cust-tel" placeholder="客戶 WhatsApp 電話">
             <div id="new-items-area"></div>
             <button onclick="addInputRow()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC;">+ 增加商品項目</button>
-            <button id="save-btn" onclick="saveOrder()" style="height:55px; margin-top:15px; background:var(--accent);">💾 儲存並同步到雲端</button>
+            <button onclick="saveOrder()" style="height:55px; margin-top:15px; background:var(--accent);">💾 儲存並同步</button>
         </div>
         <div id="order-list"></div>
     </div>
@@ -67,45 +66,35 @@
     <div id="page-tools" class="page">
         <div class="card">
             <h3>☁️ 數據同步</h3>
-            <button onclick="syncFromCloud()" style="background:var(--blue); padding:15px;">🔄 從雲端載入最新數據</button>
-            <p id="last-sync" style="font-size:11px; color:#999; text-align:center; margin-top:8px;"></p>
+            <button onclick="syncFromCloud()" style="background:var(--blue);">🔄 從雲端載入最新數據</button>
         </div>
-
         <div class="card">
-            <h3>💰 匯率報價助手</h3>
-            <div style="display:flex; gap:5px;">
-                <select id="ex-cur" style="flex:1.5;" onchange="calcEx()">
-                    <option value="0.00585">韓幣 KRW (0.00585)</option>
-                    <option value="0.0525">日幣 JPY (0.0525)</option>
-                    <option value="0.222">泰幣 THB (0.222)</option>
-                </select>
-                <div style="flex:1; display:flex; align-items:center; background:#F8F9FA; border-radius:10px; border:1px solid #E0D7CC; padding:0 8px;">
-                    <input type="number" id="ex-fee" value="5" oninput="calcEx()" style="border:none; width:40px; background:transparent; text-align:right;">%
-                </div>
-            </div>
+            <h3>💰 匯率助手 (含5%手續費)</h3>
+            <select id="ex-cur" onchange="calcEx()">
+                <option value="0.00585">韓幣 KRW</option>
+                <option value="0.0525">日幣 JPY</option>
+                <option value="0.222">泰幣 THB</option>
+            </select>
             <input type="number" id="ex-val" placeholder="輸入外幣金額" oninput="calcEx()">
-            <div id="ex-res" style="font-size:32px; text-align:center; color:var(--primary); font-weight:bold; margin:10px 0;">$0.00</div>
-            <button onclick="logEx()" style="background:var(--accent);">📌 紀錄報價</button>
-            <div id="ex-history-list" style="margin-top:10px; max-height:150px; overflow-y:auto; border-top:1px solid #EEE;"></div>
+            <div id="ex-res" style="font-size:32px; text-align:center; color:var(--primary); font-weight:bold;">$0.00</div>
         </div>
-
         <div class="card">
             <h3>🔢 單號管理</h3>
-            <input type="number" id="manual-serial" placeholder="下一個單號流水">
+            <input type="number" id="manual-serial" placeholder="下一個流水號">
             <button onclick="updateSerial()" style="background:var(--text);">更新流水號</button>
         </div>
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxPku0qTD-XQvctzBYfHQNflwBn0QH-WjwTzPwfWMDsyMvym94i0f-MlXtUbHpEjJZaRA/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxPku0qTD-XQvctzBYfHQNflwBn0QH-WjwTzPwfWMDsyMvym94i0f-MlXtUbHpEjJZaRA/exec";
         const PAY_MSG = `💸付款方式：\nPayMe：\nhttps://qr.payme.hsbc.com.hk/2/Ui316pJ5T8b428yzTSbr4J\n\n快速支付系統識別碼FPS ID：105249023\n名稱：slow over\n\n⚠️ 注意事項：\n24小時內完成付款並回傳入數截圖\n截圖請備註電話號碼以便對賬`;
         const TERMS = `下單即同意以下條款：\n1. 24小時內完成付款並回傳入數截圖。\n2. 截圖請備註或訊息電話號碼以便對賬。\n3. 訂單一經確認，不設取消、退換或更改。\n4. 如遇商品缺貨，將會全數退款。\n5. 一般預訂需時 7-30 個工作天，不接急單。\n6. 運送過程如有損壞風險需由買家承擔。\n7. SLOWOVER 保留最終決定權。感謝支持 SLOWOVER！`;
 
-        let orders = []; let serial = 300; let exLogs = JSON.parse(localStorage.getItem('slow_ex_v10')) || [];
+        let orders = []; let serial = 300;
 
         window.onload = () => {
             document.getElementById('order-date').valueAsDate = new Date();
-            addInputRow(); syncFromCloud(); renderExLogs();
+            addInputRow(); syncFromCloud();
         };
 
         async function syncFromCloud() {
@@ -117,31 +106,23 @@
                     orders = res.orders; 
                     serial = res.nextSerial || 300;
                     document.getElementById('manual-serial').value = serial;
-                    document.getElementById('last-sync').innerText = "最後更新: " + new Date().toLocaleTimeString();
-                    render(); renderBuy(); renderStats();
+                    render(); renderStats(); renderBuy();
                 }
-            } catch(e) {}
+            } catch(e) { alert("同步失敗，請確認 GAS 是否已部署為「任何人」"); }
             document.getElementById('sync-status').style.display = 'none';
         }
 
         async function autoPush() {
             document.getElementById('sync-status').style.display = 'block';
-            try {
-                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ orders, nextSerial: serial }) });
-            } catch(e) {}
+            await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ orders, nextSerial: serial }) });
             setTimeout(() => { document.getElementById('sync-status').style.display = 'none'; }, 1000);
-        }
-
-        function updateSerial() {
-            serial = parseInt(document.getElementById('manual-serial').value) || serial;
-            autoPush(); alert("流水號已更新");
         }
 
         function renderStats() {
             const listDiv = document.getElementById('stat-list');
             const q = document.getElementById('stat-search').value.toLowerCase();
             let tp = 0, tc = 0;
-            let filtered = orders.filter(o => o.tel.includes(q) || o.id.toLowerCase().includes(q) || o.items.some(it => it.name.toLowerCase().includes(q)));
+            const filtered = orders.filter(o => o.tel.includes(q) || o.id.toLowerCase().includes(q) || o.items.some(it => it.name.toLowerCase().includes(q)));
             
             listDiv.innerHTML = filtered.map(o => {
                 const ri = orders.indexOf(o);
@@ -150,50 +131,41 @@
                     op += (it.price * it.qty); oc += (it.cost * it.qty);
                     return `<div style="display:flex; justify-content:space-between; margin:5px 0; align-items:center;">
                         <span style="font-size:13px;">${it.name} x${it.qty}</span>
-                        <div style="background:#F1F1F1; border-radius:5px; padding:2px 5px;">
-                            <small>成本$</small><input type="number" value="${it.cost}" onchange="updateCost(${ri},${ii},this.value)" style="width:50px; border:none; background:transparent; padding:0; height:20px; font-size:13px; text-align:right;">
-                        </div>
+                        <input type="number" value="${it.cost}" onchange="updateCost(${ri},${ii},this.value)" style="width:70px; padding:5px; text-align:right; background:#FFF9F2; border:1px solid #D4A373;">
                     </div>`;
                 }).join('');
                 tp += op; tc += oc;
-                return `<div class="card" style="border-left:5px solid var(--accent);">
-                    <div style="display:flex; justify-content:space-between;"><b>#${o.id}</b> <small>${o.tel}</small></div>
-                    ${items}
-                    <div style="text-align:right; font-weight:bold; color:var(--primary); margin-top:8px; border-top:1px dashed #EEE;">利潤: $${(op-oc).toFixed(1)}</div>
-                </div>`;
+                return `<div class="card" style="border-left:5px solid var(--accent);"><b>#${o.id} | ${o.tel}</b><hr>${items}<div style="text-align:right; font-weight:bold; color:var(--primary); margin-top:8px;">利潤: $${(op-oc).toFixed(1)}</div></div>`;
             }).join('');
             document.getElementById('stat-total').innerHTML = `<div class="card" style="flex:1; background:var(--primary); color:white; text-align:center;">營收 $${tp}</div><div class="card" style="flex:1; background:var(--accent); color:white; text-align:center;">利潤 $${tp-tc}</div>`;
         }
 
-        function updateCost(ri, ii, val) {
-            orders[ri].items[ii].cost = parseFloat(val) || 0;
-            renderStats(); autoPush();
-        }
+        function updateCost(ri, ii, val) { orders[ri].items[ii].cost = parseFloat(val) || 0; renderStats(); autoPush(); }
 
         function render() {
             const list = document.getElementById('order-list');
             list.innerHTML = orders.slice().reverse().map((o) => {
                 const ri = orders.indexOf(o);
-                return `<div class="order-card">
-                    <div class="del-btn" onclick="if(confirm('確定要刪除這筆訂單嗎？')){orders.splice(${ri},1); render(); autoPush();}">×</div>
+                return `<div class="card order-card">
+                    <div class="del-btn" onclick="if(confirm('確定刪除訂單？')){orders.splice(${ri},1); render(); autoPush();}">×</div>
                     <div style="font-size:10px; color:#AAA;">#${o.id} | ${o.date}</div>
-                    <div style="font-size:18px; font-weight:bold;">📞 ${o.tel}</div>
+                    <div style="font-size:16px; font-weight:bold;">📞 ${o.tel}</div>
                     ${o.items.map((it, ii) => `
-                        <div style="background:#FCFAf7; padding:8px; border-radius:10px; margin:5px 0;">
-                            <div style="font-weight:bold; font-size:14px;">${it.name} x${it.qty}</div>
-                            <span class="tag buy ${it.bought?'active':''}" onclick="togIt(${ri},${ii},'bought')">${it.bought?'已買':'未買'}</span>
-                            <span class="tag arr ${it.arrived?'active':''}" onclick="togIt(${ri},${ii},'arrived')">${it.arrived?'已到港':'未到'}</span>
+                        <div style="background:#FCFAf7; padding:10px; border-radius:12px; margin:8px 0;">
+                            <div><b>${it.name} x${it.qty}</b></div>
+                            <span class="tag buy ${it.bought?'active':''}" onclick="togIt(${ri},${ii},'bought')">已買</span>
+                            <span class="tag arr ${it.arrived?'active':''}" onclick="togIt(${ri},${ii},'arrived')">已到港</span>
                         </div>
                     `).join('')}
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:10px;">
+                    <div style="display:flex; gap:5px; margin-top:10px;">
                         <div class="st-btn paid ${o.paid?'active':''}" onclick="updO(${ri},'paid')">💰已付</div>
                         <div class="st-btn ship ${o.shipped?'active':''}" onclick="updO(${ri},'shipped')">🏠已寄</div>
                         <div class="st-btn refund ${o.refunded?'active':''}" onclick="updO(${ri},'refunded')">已退款</div>
                     </div>
-                    <input type="text" placeholder="登記地址 / 順豐單號" value="${o.address||''}" onchange="orders[${ri}].address=this.value; autoPush();" style="font-size:13px; margin-top:10px; background:#F9F9F9;">
+                    <input type="text" placeholder="收件資料/單號" value="${o.address||''}" onchange="orders[${ri}].address=this.value; autoPush();" style="margin-top:10px; font-size:12px;">
                     <div style="display:flex; gap:5px; margin-top:10px;">
-                        <button onclick="copyB(${ri})" style="flex:1; font-size:11px; background:var(--accent);">📋 出單通知</button>
-                        <button onclick="copyA(${ri})" style="flex:1; font-size:11px; background:var(--purple);">📋 索取資料</button>
+                        <button onclick="copyB(${ri})" style="flex:1; font-size:11px; background:var(--accent);">📋 出單</button>
+                        <button onclick="copyA(${ri})" style="flex:1; font-size:11px; background:var(--primary);">📋 索資</button>
                     </div>
                 </div>`;
             }).join('');
@@ -218,49 +190,36 @@
 
         function togIt(oi, ii, k) { orders[oi].items[ii][k] = !orders[oi].items[ii][k]; render(); autoPush(); }
         function updO(oi, k) { orders[oi][k] = !orders[oi][k]; render(); autoPush(); }
-        
-        function renderBuy() {
-            let m = {};
-            orders.forEach(o => o.items.forEach(it => {
-                if(!m[it.name]) m[it.name] = { t: 0, b: 0, a: 0 };
-                m[it.name].t += it.qty; if(it.bought) m[it.name].b += it.qty; if(it.arrived) m[it.name].a += it.qty;
-            }));
-            let h = "<h3>🛍️ 採購總計</h3>";
-            for(let n in m) h += `<div style="padding:10px; border-bottom:1px solid #EEE;"><b>${n}</b><br><small>已買: ${m[n].b} | 已到港: ${m[n].a} | 總需: ${m[n].t}</small></div>`;
-            document.getElementById('buy-summary').innerHTML = h || "<p>暫無數據</p>";
+        function switchPage(p, btn) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-'+p).classList.add('active'); btn.classList.add('active');
+            if(p === 'stats') renderStats(); if(p === 'buy') renderBuy();
         }
-
         function addInputRow() {
             const d = document.createElement('div'); d.className = 'item-row';
             d.innerHTML = `<div style="display:flex; gap:5px;"><input type="text" class="i-n" placeholder="商品名" style="flex:2"><input type="number" class="i-q" value="1" style="flex:0.6;"><input type="number" class="i-p" placeholder="售價" style="flex:1"></div>`;
             document.getElementById('new-items-area').appendChild(d);
         }
-
-        function switchPage(p, btn) {
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById('page-'+p).classList.add('active'); btn.classList.add('active');
-            if(p === 'buy') renderBuy(); if(p === 'stats') renderStats();
+        function renderBuy() {
+            let m = {};
+            orders.forEach(o => o.items.forEach(it => {
+                if(!m[it.name]) m[it.name] = { t: 0, b: 0 };
+                m[it.name].t += it.qty; if(it.bought) m[it.name].b += it.qty;
+            }));
+            let h = "<h3>🛍️ 採購清單</h3>";
+            for(let n in m) h += `<div style="padding:10px; border-bottom:1px solid #EEE;">${n}: 已買 ${m[n].b} / 總 ${m[n].t}</div>`;
+            document.getElementById('buy-summary').innerHTML = h;
         }
-
-        // --- 匯率助手函數 ---
         function calcEx() {
             const r = parseFloat(document.getElementById('ex-cur').value);
-            const f = 1 + (parseFloat(document.getElementById('ex-fee').value) || 0)/100;
             const v = parseFloat(document.getElementById('ex-val').value) || 0;
-            document.getElementById('ex-res').innerText = `$${(v * r * f).toFixed(2)}`;
+            document.getElementById('ex-res').innerText = `$${(v * r * 1.05).toFixed(2)}`;
         }
-        function logEx() {
-            const res = document.getElementById('ex-res').innerText;
-            if(res === "$0.00") return;
-            exLogs.unshift({ time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), txt: res });
-            if(exLogs.length > 10) exLogs.pop();
-            localStorage.setItem('slow_ex_v10', JSON.stringify(exLogs)); renderExLogs();
+        function updateSerial() {
+            serial = parseInt(document.getElementById('manual-serial').value) || serial;
+            autoPush(); alert("流水號已更新");
         }
-        function renderExLogs() {
-            document.getElementById('ex-history-list').innerHTML = exLogs.map(l => `<div class="log-item"><span>${l.txt}</span><span style="color:#CCC;">${l.time}</span></div>`).join('');
-        }
-
         function copyB(idx) {
             const o = orders[idx];
             const txt = `【SlowOver 出單通知】\n單號：#${o.id}\n電話：${o.tel}\n\n項目：\n${o.items.map(it => `- ${it.name} x${it.qty}`).join('\n')}\n總額：$${o.items.reduce((s,it)=>s+(it.price*it.qty),0)}\n\n${PAY_MSG}\n\n${TERMS}`;
@@ -268,7 +227,7 @@
         }
         function copyA(idx) {
             const o = orders[idx];
-            const txt = `【SlowOver 收貨資料】\n單號：#${o.id}\n貨品已齊，請提供收件資料：\n\n姓名：\n電話：\n地址/門市：\n\n感謝！🌻`;
+            const txt = `【SlowOver 收貨資料】\n單號：#${o.id}\n貨品已齊，請提供收件資料：\n\n姓名：\n電話：\n地址：\n\n感謝！🌻`;
             navigator.clipboard.writeText(txt).then(() => alert("已複製"));
         }
     </script>
