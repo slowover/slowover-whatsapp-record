@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V91.22</title>
+    <title>SlowOver CRM V91.23</title>
     <style>
         :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --accent: #8EAD91; --blue: #5C7CFA; --green: #40C057; --red: #E03131; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 120px 15px; }
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; border-top: 1px solid #EEE; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { flex: 1; padding: 18px 0; text-align: center; font-size: 11px; color: #999; font-weight: bold; }
+        .nav-item { flex: 1; padding: 18px 0; text-align: center; font-size: 11px; color: #999; font-weight: bold; cursor: pointer; }
         .nav-item.active { color: var(--primary); }
         .card { background: white; padding: 15px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 12px; position: relative; }
         .page { display: none; max-width: 600px; margin: 0 auto; }
         .page.active { display: block; }
-        input, select, button { width: 100%; padding: 14px; margin: 5px 0; border: 1px solid #E0D7CC; border-radius: 10px; font-size: 14px; }
+        input, select, button { width: 100%; padding: 12px; margin: 4px 0; border: 1px solid #E0D7CC; border-radius: 10px; font-size: 14px; }
         button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         .order-card { border-left: 8px solid var(--primary); }
         .del-btn { position: absolute; top: 12px; right: 12px; color: var(--red); font-size: 22px; cursor: pointer; font-weight: bold; }
@@ -25,6 +25,8 @@
         .st-btn.active.paid { background: var(--green); color: white; border-color: var(--green); }
         .st-btn.active.ship { background: var(--blue); color: white; border-color: var(--blue); }
         .st-btn.active.refund { background: var(--red); color: white; border-color: var(--red); }
+        .filter-group { display: flex; gap: 5px; margin-bottom: 8px; }
+        .filter-group select, .filter-group input { padding: 8px; font-size: 12px; }
         #sync-status { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 8px 15px; border-radius: 20px; font-size: 11px; display: none; z-index: 2000; }
     </style>
 </head>
@@ -52,6 +54,26 @@
     </div>
 
     <div id="page-buy" class="page">
+        <div class="card">
+            <h3>🔍 採購篩選</h3>
+            <input type="text" id="buy-search" placeholder="搜尋電話/單號/商品..." oninput="renderBuy()">
+            <div class="filter-group">
+                <input type="date" id="buy-date-start" onchange="renderBuy()">
+                <input type="date" id="buy-date-end" onchange="renderBuy()">
+            </div>
+            <div class="filter-group">
+                <select id="buy-filter-paid" onchange="renderBuy()">
+                    <option value="all">所有付款狀態</option>
+                    <option value="paid">💰 已付</option>
+                    <option value="unpaid">⏳ 未付</option>
+                </select>
+                <select id="buy-filter-bought" onchange="renderBuy()">
+                    <option value="all">所有採購狀態</option>
+                    <option value="not-bought">❌ 未買</option>
+                    <option value="bought">✅ 已買</option>
+                </select>
+            </div>
+        </div>
         <div class="card" id="buy-summary"></div>
     </div>
 
@@ -108,7 +130,7 @@
                     document.getElementById('manual-serial').value = serial;
                     render(); renderStats(); renderBuy();
                 }
-            } catch(e) { alert("同步失敗，請確認 GAS 是否已部署為「任何人」"); }
+            } catch(e) { alert("同步失敗，請檢查網路及權限"); }
             document.getElementById('sync-status').style.display = 'none';
         }
 
@@ -116,6 +138,54 @@
             document.getElementById('sync-status').style.display = 'block';
             await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ orders, nextSerial: serial }) });
             setTimeout(() => { document.getElementById('sync-status').style.display = 'none'; }, 1000);
+        }
+
+        function renderBuy() {
+            const q = document.getElementById('buy-search').value.toLowerCase();
+            const start = document.getElementById('buy-date-start').value;
+            const end = document.getElementById('buy-date-end').value;
+            const paidFilter = document.getElementById('buy-filter-paid').value;
+            const boughtFilter = document.getElementById('buy-filter-bought').value;
+
+            let m = {};
+            orders.forEach(o => {
+                // 1. 日期篩選
+                if (start && o.date < start) return;
+                if (end && o.date > end) return;
+                // 2. 付款狀態篩選
+                if (paidFilter === 'paid' && !o.paid) return;
+                if (paidFilter === 'unpaid' && o.paid) return;
+                // 3. 基本搜尋 (單號、電話)
+                const basicMatch = o.id.toLowerCase().includes(q) || o.tel.includes(q);
+
+                o.items.forEach(it => {
+                    // 4. 商品採購狀態篩選
+                    if (boughtFilter === 'bought' && !it.bought) return;
+                    if (boughtFilter === 'not-bought' && it.bought) return;
+                    // 5. 商品名稱搜尋
+                    const nameMatch = it.name.toLowerCase().includes(q);
+                    
+                    if (basicMatch || nameMatch) {
+                        if(!m[it.name]) m[it.name] = { total: 0, bought: 0 };
+                        m[it.name].total += it.qty;
+                        if(it.bought) m[it.name].bought += it.qty;
+                    }
+                });
+            });
+
+            let h = "<h3>🛍️ 採購清單匯總</h3>";
+            const keys = Object.keys(m);
+            if (keys.length === 0) h += "<p style='color:#999; text-align:center;'>找不到符合條件的商品</p>";
+            keys.forEach(n => {
+                h += `<div style="padding:12px; border-bottom:1px solid #EEE; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight:bold;">${n}</div>
+                        <div style="text-align:right; font-size:12px;">
+                            <span style="color:var(--red);">需買: ${m[n].total - m[n].bought}</span> / 
+                            <span style="color:#666;">總數: ${m[n].total}</span>
+                        </div>
+                      </div>`;
+            });
+            document.getElementById('buy-summary').innerHTML = h;
         }
 
         function renderStats() {
@@ -131,7 +201,7 @@
                     op += (it.price * it.qty); oc += (it.cost * it.qty);
                     return `<div style="display:flex; justify-content:space-between; margin:5px 0; align-items:center;">
                         <span style="font-size:13px;">${it.name} x${it.qty}</span>
-                        <input type="number" value="${it.cost}" onchange="updateCost(${ri},${ii},this.value)" style="width:70px; padding:5px; text-align:right; background:#FFF9F2; border:1px solid #D4A373;">
+                        <input type="number" value="${it.cost}" onchange="updateCost(${ri},${ii},this.value)" style="width:70px; padding:5px; text-align:right; background:#FFF9F2;">
                     </div>`;
                 }).join('');
                 tp += op; tc += oc;
@@ -160,7 +230,7 @@
                     <div style="display:flex; gap:5px; margin-top:10px;">
                         <div class="st-btn paid ${o.paid?'active':''}" onclick="updO(${ri},'paid')">💰已付</div>
                         <div class="st-btn ship ${o.shipped?'active':''}" onclick="updO(${ri},'shipped')">🏠已寄</div>
-                        <div class="st-btn refund ${o.refunded?'active':''}" onclick="updO(${ri},'refunded')">已退款</div>
+                        <div class="st-btn refund ${o.refunded?'active':''}" onclick="updO(${ri},'refunded')">已退</div>
                     </div>
                     <input type="text" placeholder="收件資料/單號" value="${o.address||''}" onchange="orders[${ri}].address=this.value; autoPush();" style="margin-top:10px; font-size:12px;">
                     <div style="display:flex; gap:5px; margin-top:10px;">
@@ -188,8 +258,9 @@
             document.getElementById('cust-tel').value = ""; document.getElementById('new-items-area').innerHTML = ""; addInputRow();
         }
 
-        function togIt(oi, ii, k) { orders[oi].items[ii][k] = !orders[oi].items[ii][k]; render(); autoPush(); }
-        function updO(oi, k) { orders[oi][k] = !orders[oi][k]; render(); autoPush(); }
+        function togIt(oi, ii, k) { orders[oi].items[ii][k] = !orders[oi].items[ii][k]; render(); renderBuy(); autoPush(); }
+        function updO(oi, k) { orders[oi][k] = !orders[oi][k]; render(); renderBuy(); autoPush(); }
+        
         function switchPage(p, btn) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
@@ -200,16 +271,6 @@
             const d = document.createElement('div'); d.className = 'item-row';
             d.innerHTML = `<div style="display:flex; gap:5px;"><input type="text" class="i-n" placeholder="商品名" style="flex:2"><input type="number" class="i-q" value="1" style="flex:0.6;"><input type="number" class="i-p" placeholder="售價" style="flex:1"></div>`;
             document.getElementById('new-items-area').appendChild(d);
-        }
-        function renderBuy() {
-            let m = {};
-            orders.forEach(o => o.items.forEach(it => {
-                if(!m[it.name]) m[it.name] = { t: 0, b: 0 };
-                m[it.name].t += it.qty; if(it.bought) m[it.name].b += it.qty;
-            }));
-            let h = "<h3>🛍️ 採購清單</h3>";
-            for(let n in m) h += `<div style="padding:10px; border-bottom:1px solid #EEE;">${n}: 已買 ${m[n].b} / 總 ${m[n].t}</div>`;
-            document.getElementById('buy-summary').innerHTML = h;
         }
         function calcEx() {
             const r = parseFloat(document.getElementById('ex-cur').value);
