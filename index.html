@@ -2,79 +2,197 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SlowOver CRM V91.70 TableSync</title>
-    </head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SlowOver CRM V91.80</title>
+    <style>
+        :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --accent: #8EAD91; --blue: #5C7CFA; --green: #40C057; --red: #E03131; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 100px 15px; }
+        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 12px; }
+        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; border-top: 1px solid #EEE; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 12px; color: #AAA; font-weight: bold; }
+        .nav-item.active { color: var(--primary); }
+        .page { display: none; }
+        .page.active { display: block; }
+        input, textarea, button { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #DDD; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
+        button { background: var(--primary); color: white; border: none; font-weight: bold; }
+        .item-row { background: #FDFBFA; padding: 10px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #F0E6D8; }
+        #status-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
+    </style>
+</head>
 <body>
-    <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyx9esL5EBvlrswdoxfgY9dwIgmjNbd9kkpsfZCzSk5kfIs7CcYDz-lAc8f2h2jt4f9OA/exec";
-        let orders = [], serial = 402, settings = {rate:10.2, from:'GBP', fee:0};
 
-        // 核心：從表格讀取並修正日期格式
+    <div id="status-overlay">
+        <div style="font-size: 40px;">📦</div>
+        <div id="status-text">連線中...</div>
+    </div>
+
+    <div id="page-main" class="page active">
+        <div class="card">
+            <h3 style="margin-top:0;">📝 新增訂單</h3>
+            <input type="date" id="order-date">
+            <input type="tel" id="cust-tel" placeholder="客戶電話">
+            <div id="new-items-area"></div>
+            <button onclick="addInputRow()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC;">+ 增加商品</button>
+            <textarea id="order-rem" placeholder="備註 / 地址 (對應 O 欄)"></textarea>
+            <div id="total-price" style="text-align:right; font-weight:900; color:var(--red); padding:10px 0;">總計: $0</div>
+            <button onclick="saveOrder()" style="background:var(--accent); height:55px;">💾 儲存並同步到表格</button>
+        </div>
+        <div id="order-list"></div>
+    </div>
+
+    <div id="page-buy" class="page">
+        <div class="card"><h3>🛍️ 待採購匯總</h3><div id="buy-summary"></div></div>
+    </div>
+
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="switchPage('main', this)">📝 訂單</div>
+        <div class="nav-item" onclick="switchPage('buy', this)">🛍️ 採購</div>
+    </nav>
+
+    <script>
+        // 【核心】請填寫你的 GAS 網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyB-x0RT8PDWhfE83QJeWOswVp2rfxcv1T-3MrcrxBiARcnjdCdqSHyITI05mdOcMtnKw/exec"; 
+
+        let orders = [], serial = 402;
+
+        window.onload = () => {
+            document.getElementById('order-date').valueAsDate = new Date();
+            addInputRow();
+            if (GAS_URL.includes("你的_GAS_網址")) {
+                document.getElementById('status-text').innerHTML = "<span style='color:red;'>錯誤：尚未填寫 GAS 網址</span>";
+            } else {
+                syncFromCloud();
+            }
+        };
+
         async function syncFromCloud() {
             try {
-                const r = await fetch(GAS_URL + "?t=" + Date.now());
-                const res = await r.json();
-                if(res) {
-                    orders = res.orders.map(o => {
-                        // 修正：將表格讀到的日期轉為 YYYY-MM-DD
-                        if(o.date) o.date = new Date(o.date).toISOString().split('T')[0];
-                        return o;
-                    });
-                    serial = res.nextSerial;
-                    if(res.settings) settings = res.settings;
-                    render();
+                const response = await fetch(GAS_URL + "?t=" + Date.now());
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('status-text').innerText = "表格報錯: " + data.error;
+                    return;
                 }
-            } catch(e) { console.error("同步出錯", e); }
-            document.getElementById('loading-lock').style.display = 'none';
+
+                orders = data.orders.map(o => {
+                    try { o.date = new Date(o.date).toISOString().split('T')[0]; } catch(e) { o.date = "日期未知"; }
+                    return o;
+                });
+                serial = data.nextSerial;
+                render();
+                document.getElementById('status-overlay').style.display = 'none';
+            } catch (e) {
+                document.getElementById('status-text').innerHTML = "連線失敗<br><small>請檢查 GAS 網址與部署權限</small>";
+            }
         }
 
-        // 核心：儲存訂單到表格
+        function addInputRow() {
+            const container = document.getElementById('new-items-area');
+            const row = document.createElement('div');
+            row.className = 'item-row';
+            row.innerHTML = `
+                <input type="text" class="i-n" placeholder="商品名稱" oninput="updateTotal()">
+                <div style="display:flex; gap:5px;">
+                    <input type="number" class="i-q" value="1" style="flex:0.5" oninput="updateTotal()">
+                    <input type="number" class="i-p" placeholder="售價" style="flex:1" oninput="updateTotal()">
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        function updateTotal() {
+            let total = 0;
+            document.querySelectorAll('.item-row').forEach(r => {
+                const q = parseFloat(r.querySelector('.i-q').value) || 0;
+                const p = parseFloat(r.querySelector('.i-p').value) || 0;
+                total += (q * p);
+            });
+            document.getElementById('total-price').innerText = "總計: $" + total;
+        }
+
         async function saveOrder() {
             const tel = document.getElementById('cust-tel').value;
-            const rem = document.getElementById('order-rem').value;
+            if (!tel) return alert("請輸入電話");
+
             let its = [];
             document.querySelectorAll('.item-row').forEach(r => {
-                const n = r.querySelector('.i-n').value;
-                if(n) its.push({
-                    name: n, 
-                    qty: parseInt(r.querySelector('.i-q').value) || 1, 
-                    price: parseFloat(r.querySelector('.i-p').value) || 0, 
-                    cost: 0, 
-                    bought: false, 
-                    arrived: false
+                const name = r.querySelector('.i-n').value;
+                if (name) its.push({
+                    name: name,
+                    qty: parseInt(r.querySelector('.i-q').value) || 1,
+                    price: parseFloat(r.querySelector('.i-p').value) || 0,
+                    cost: 0
                 });
             });
 
-            if(!tel || its.length === 0) return alert("資料不足");
-
-            const newO = { 
-                id: `WS26JAN${serial}`, // 根據你截圖的編號格式調整
-                date: document.getElementById('order-date').value, 
-                tel, 
-                rem, 
-                items: its, 
-                paid: false 
+            const newOrder = {
+                id: "WS26JAN" + serial,
+                date: document.getElementById('order-date').value,
+                tel: tel,
+                rem: document.getElementById('order-rem').value,
+                items: its,
+                paid: false
             };
 
-            orders.push(newO);
-            serial++; // 流水號遞增
-            render();
+            document.getElementById('status-overlay').style.display = 'flex';
+            document.getElementById('status-text').innerText = "正在儲存到 Google 表格...";
 
-            // 推送到 GAS 寫入表格
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({type: 'UPDATE_SINGLE', order: newO, nextSerial: serial})
-            });
-
-            // 重置輸入框
-            document.getElementById('cust-tel').value = "";
-            document.getElementById('order-rem').value = "";
-            document.getElementById('new-items-area').innerHTML = "";
-            addInputRow();
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({type: 'UPDATE_SINGLE', order: newOrder, nextSerial: serial + 1})
+                });
+                location.reload(); // 成功後自動重整刷新數據
+            } catch(e) {
+                alert("儲存失敗，請檢查網路。");
+                document.getElementById('status-overlay').style.display = 'none';
+            }
         }
 
-        // 其餘功能 (render, copyMsg, quickFX) 保持之前邏輯...
+        function render() {
+            const list = document.getElementById('order-list');
+            list.innerHTML = orders.slice().reverse().map(o => {
+                const total = o.items.reduce((sum, it) => sum + (it.price * it.qty), 0);
+                return `
+                <div class="card" style="border-left: 5px solid ${o.paid ? 'var(--green)' : 'var(--primary)'}">
+                    <div style="font-size:10px; color:#AAA;">#${o.id} | ${o.date}</div>
+                    <div style="font-weight:bold; font-size:16px; margin:4px 0;">📞 ${o.tel}</div>
+                    <div style="font-size:12px; color:#888;">${o.rem}</div>
+                    <div style="margin-top:8px;">
+                        ${o.items.map(it => `<div style="font-size:13px;">• ${it.name} x${it.qty} ($${it.price})</div>`).join('')}
+                    </div>
+                    <div style="text-align:right; font-weight:900; color:var(--primary); border-top:1px solid #F0F0F0; margin-top:8px; padding-top:5px;">
+                        總計: $${total}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function switchPage(p, btn) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            btn.classList.add('active');
+            if(p === 'buy') renderBuy();
+        }
+
+        function renderBuy() {
+            let sum = {};
+            orders.forEach(o => o.items.forEach(it => {
+                if (!it.bought) {
+                    if (!sum[it.name]) sum[it.name] = 0;
+                    sum[it.name] += it.qty;
+                }
+            }));
+            const sorted = Object.keys(sum).sort();
+            document.getElementById('buy-summary').innerHTML = sorted.length ? sorted.map(n => `
+                <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #EEE;">
+                    <span style="font-weight:bold;">${n}</span>
+                    <span style="color:var(--red); font-weight:900;">x${sum[n]}</span>
+                </div>
+            `).join('') : "✅ 所有商品已買齊！";
+        }
     </script>
 </body>
 </html>
