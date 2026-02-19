@@ -78,22 +78,29 @@
     </nav>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycby4k_LaA9eglW03mi1zpEEUaALGrJrDZvz01B14J6N617qgT1NXaJ05k3inDqUdFm-c/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxs6jWi7wAKqnHoAH2GMC1Ooh2QVYmREf7377MIfLBcCvSxP3xnr1Vea2Lg9Oup3BE9Uw/exec";
         let orders = [], serial = 300, settings = {rate:10.2, from:'GBP', fee:0};
 
         window.onload = () => { syncFromCloud(); addInputRow(); document.getElementById('order-date').valueAsDate = new Date(); };
 
         // 核心功能：同步
-        async function syncFromCloud() {
-            const r = await fetch(GAS_URL + "?t=" + Date.now());
-            const res = await r.json();
-            if(res) { 
-                orders = res.orders; serial = res.nextSerial; 
-                if(res.settings) { settings = res.settings; updateFXUI(); }
-                render(); 
-            }
+      async function syncFromCloud() {
+    try {
+        const r = await fetch(GAS_URL + "?t=" + Date.now());
+        const res = await r.json();
+        if(res) {
+            // 處理 Google 表格可能回傳的 ISO 日期格式
+            orders = res.orders.map(o => {
+                if(typeof o.date === 'string') o.date = o.date.split('T')[0];
+                return o;
+            });
+            serial = res.nextSerial;
+            render();
         }
-
+    } catch(e) {
+        alert("資料讀取失敗，請檢查 GAS 權限");
+    }
+}
         async function partialPush(o) {
             document.getElementById('sync-status').style.display='block';
             await fetch(GAS_URL, {method:'POST', body: JSON.stringify({type:'UPDATE_SINGLE', order:o, nextSerial:serial})});
