@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V92.20 Full</title>
+    <title>SlowOver CRM V93</title>
     <style>
         :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --blue: #5C7CFA; --red: #E03131; --green: #25D366; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px 10px 120px 10px; }
@@ -15,38 +15,38 @@
         .page.active { display: block; }
         input, textarea, button, select { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #E0D7CC; border-radius: 12px; font-size: 14px; box-sizing: border-box; }
         .item-row { background: #FDFBFA; padding: 12px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #F0E6D8; }
-        .btn-status { border: 1px solid #DDD; background: #F9F9F9; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #777; width: auto; display: inline-block; }
+        .btn-status { border: 1px solid #DDD; background: #F9F9F9; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #777; width: auto; font-weight: bold; }
         .btn-status.active { background: var(--green); color: white; border-color: var(--green); }
         .btn-status.shipped.active { background: var(--blue); border-color: var(--blue); }
-        .buy-group { border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 15px; background: rgba(212,163,115,0.05); }
+        .total-row { display: flex; justify-content: space-between; font-weight: bold; color: var(--red); font-size: 18px; margin: 10px 0; }
         #copy-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
         .modal-content { background: white; width: 90%; padding: 20px; border-radius: 25px; }
-        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:white; display:flex; justify-content:center; align-items:center; z-index:10000; }
+        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:white; display:flex; justify-content:center; align-items:center; z-index:10000; font-weight:bold; }
     </style>
 </head>
 <body>
 
-    <div id="loading">⏳ 同步中...</div>
+    <div id="loading">⏳ 同步雲端數據中...</div>
 
     <div id="copy-modal">
         <div class="modal-content">
-            <h3 style="margin:0 0 10px 0;">📋 訂單通知文案</h3>
-            <textarea id="copy-area" readonly style="height: 300px; font-size: 13px;"></textarea>
-            <button onclick="copyToClipboard()" style="background:var(--green); margin-top:10px;">一鍵複製文案</button>
-            <button onclick="closeModal()" style="background:#EEE; color:#666; margin-top:5px;">關閉</button>
+            <h3 style="margin-top:0;">📋 訂單通知文案</h3>
+            <textarea id="copy-area" readonly style="height: 350px; font-size: 12px; line-height: 1.5;"></textarea>
+            <button onclick="copyToClipboard()" style="background:var(--green); color:white; margin-top:10px;">一鍵複製</button>
+            <button onclick="closeModal()" style="background:#EEE; margin-top:5px;">關閉</button>
         </div>
     </div>
 
     <div id="page-reg" class="page active">
         <div class="card">
-            <h3 style="margin-top:0;">📝 登記新訂單</h3>
+            <h3 style="margin:0 0 10px 0; color:var(--primary);">📝 登記新訂單</h3>
             <input type="date" id="order-date">
-            <input type="tel" id="cust-tel" placeholder="客戶電話">
+            <input type="tel" id="cust-tel" placeholder="客戶 WhatsApp 電話">
             <div id="new-items-area"></div>
-            <button onclick="addInputRow()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC;">+ 增加商品項目</button>
-            <textarea id="order-rem" placeholder="📍 地址 / 備註 (對應表格 O 欄)"></textarea>
-            <div id="total-display" style="text-align:right; font-weight:900; color:var(--red); padding:10px 0; font-size:20px;">總計: $0</div>
-            <button onclick="saveOrder()" style="background:var(--accent); height:55px; font-size:16px;">💾 儲存並同步到表格</button>
+            <button onclick="addInputRow()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC;">+ 增加商品</button>
+            <textarea id="order-rem" placeholder="📍 送貨地址 / 備註 (O 欄)"></textarea>
+            <div class="total-row"><span>訂單總計:</span><span id="total-display">$0</span></div>
+            <button onclick="saveOrder()" style="background:var(--primary); color:white; font-size:16px;">💾 儲存並同步</button>
         </div>
     </div>
 
@@ -56,25 +56,37 @@
 
     <div id="page-buy" class="page">
         <div class="card">
-            <input type="text" id="buy-search" placeholder="🔍 搜尋商品名稱..." oninput="renderBuy()">
+            <input type="text" id="buy-search" placeholder="🔍 搜尋商品..." oninput="renderBuy()">
             <select id="buy-filter" onchange="renderBuy()">
                 <option value="pending">🛒 待採買 (未買)</option>
-                <option value="unpaid">💰 未付款訂單</option>
-                <option value="all">顯示所有項目</option>
+                <option value="all">全部項目</option>
             </select>
         </div>
         <div id="buy-summary"></div>
+    </div>
+
+    <div id="page-fx" class="page">
+        <div class="card">
+            <h3 style="margin-top:0; color:var(--primary);">💹 匯率助手設定</h3>
+            <label style="font-size:11px;">預設使用幣種</label>
+            <select id="fx-from"><option value="GBP">GBP 英鎊</option><option value="JPY">JPY 日圓</option><option value="KRW">KRW 韓幣</option><option value="EUR">EUR 歐羅</option><option value="USD">USD 美元</option></select>
+            <div id="rates-inputs"></div>
+            <label style="font-size:11px;">手續費加成 %</label>
+            <input type="number" id="fx-fee" step="0.1">
+            <button onclick="saveFX()" style="background:var(--blue); color:white;">💾 儲存匯率設定</button>
+        </div>
     </div>
 
     <nav class="nav-bar">
         <div class="nav-item active" onclick="switchPage('reg', this)">📝 登記</div>
         <div class="nav-item" onclick="switchPage('list', this)">📋 訂單</div>
         <div class="nav-item" onclick="switchPage('buy', this)">🛍️ 採購</div>
+        <div class="nav-item" onclick="switchPage('fx', this)">💹 匯率</div>
     </nav>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxPcskRvFZoka0kzvUo7zcj7qQOkwt2QGVIvdJf6R_-iQl9somIDcFtstCFJujAIP-o/exec"; 
-        let rawData = [], settings = {from:'GBP', rate:10.2, fee:0}, serial = 402;
+        let rawData = [], settings = {}, serial = 402;
 
         window.onload = () => {
             document.getElementById('order-date').valueAsDate = new Date();
@@ -86,35 +98,79 @@
             const r = await fetch(GAS_URL + "?t=" + Date.now());
             const res = await r.json();
             rawData = res.orders; serial = res.nextSerial; settings = res.settings;
-            renderOrders();
+            renderOrders(); renderFXInputs();
             document.getElementById('loading').style.display = 'none';
+        }
+
+        function renderFXInputs() {
+            const container = document.getElementById('rates-inputs');
+            container.innerHTML = Object.keys(settings.rates).map(cur => `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="width:40px; font-weight:bold;">${cur}</span>
+                    <input type="number" class="fx-val" data-cur="${cur}" value="${settings.rates[cur]}" step="0.001">
+                </div>
+            `).join('');
+            document.getElementById('fx-from').value = settings.from;
+            document.getElementById('fx-fee').value = settings.fee;
+        }
+
+        async function saveFX() {
+            settings.from = document.getElementById('fx-from').value;
+            settings.fee = parseFloat(document.getElementById('fx-fee').value);
+            document.querySelectorAll('.fx-val').forEach(input => {
+                settings.rates[input.dataset.cur] = parseFloat(input.value);
+            });
+            document.getElementById('loading').style.display = 'flex';
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type: 'SAVE_SETTINGS', settings}) });
+            location.reload();
         }
 
         function addInputRow() {
             const d = document.createElement('div');
             d.className = 'item-row';
-            d.innerHTML = `<input type="text" class="i-n" placeholder="商品名稱" oninput="calcTotal()"><div style="display:flex; gap:5px;"><input type="number" class="i-q" value="1" style="flex:0.4" oninput="calcTotal()"><input type="number" class="i-p" placeholder="售價" style="flex:1" oninput="calcTotal()"><input type="number" class="i-c" placeholder="成本" style="flex:0.8; background:#FFF9DB;"><button style="width:45px; background:var(--blue); color:white; border:none; border-radius:8px;" onclick="applyFX(this)">💹</button></div>`;
+            d.innerHTML = `
+                <input type="text" class="i-n" placeholder="商品名稱" oninput="calcTotal()">
+                <div style="display:flex; gap:5px;">
+                    <input type="number" class="i-q" value="1" style="flex:0.4" oninput="calcTotal()">
+                    <input type="number" class="i-p" placeholder="售價" style="flex:1" oninput="calcTotal()">
+                    <button style="width:45px; background:var(--blue); color:white; border:none; border-radius:8px;" onclick="applyFX(this)">💹</button>
+                </div>
+                <div class="i-sub" style="font-size:11px; text-align:right; color:#999; margin-top:4px;">小計: $0</div>
+            `;
             document.getElementById('new-items-area').appendChild(d);
         }
 
         function applyFX(btn) {
             const pInput = btn.parentElement.querySelector('.i-p');
-            const amt = prompt(`輸入 ${settings.from} 金額:`);
-            if(amt) { pInput.value = Math.ceil(amt * settings.rate * (1 + settings.fee/100)); calcTotal(); }
+            const cur = settings.from;
+            const amt = prompt(`輸入 ${cur} 金額:`);
+            if(amt) {
+                const rate = settings.rates[cur];
+                const fee = 1 + (settings.fee / 100);
+                pInput.value = Math.ceil(amt * rate * fee);
+                calcTotal();
+            }
         }
 
         function calcTotal() {
-            let t = 0; document.querySelectorAll('.item-row').forEach(r => { t += (r.querySelector('.i-q').value * r.querySelector('.i-p').value || 0); });
-            document.getElementById('total-display').innerText = "總計: HKD $" + t;
+            let total = 0;
+            document.querySelectorAll('.item-row').forEach(r => {
+                const q = parseFloat(r.querySelector('.i-q').value) || 0;
+                const p = parseFloat(r.querySelector('.i-p').value) || 0;
+                const sub = q * p;
+                r.querySelector('.i-sub').innerText = `小計: $${sub}`;
+                total += sub;
+            });
+            document.getElementById('total-display').innerText = `$${total}`;
         }
 
         async function saveOrder() {
             const tel = document.getElementById('cust-tel').value;
-            if(!tel) return alert("請輸入電話");
+            if(!tel) return alert("輸入電話");
             let its = [];
             document.querySelectorAll('.item-row').forEach(r => {
                 const n = r.querySelector('.i-n').value;
-                if(n) its.push({ name: n, qty: parseInt(r.querySelector('.i-q').value), price: parseFloat(r.querySelector('.i-p').value), cost: parseFloat(r.querySelector('.i-c').value) || 0 });
+                if(n) its.push({ name: n, qty: parseInt(r.querySelector('.i-q').value), price: parseFloat(r.querySelector('.i-p').value) });
             });
             const d = new Date(); const dateStr = d.getDate() + ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getMonth()];
             const newO = { id: "WS"+dateStr+serial, date: document.getElementById('order-date').value, tel, rem: document.getElementById('order-rem').value, items: its };
@@ -132,12 +188,26 @@
                 return `<div class="card">
                     <div style="font-size:10px; color:#AAA;">#${o.id} | ${o.paid ? '✅已付' : '⏳未付'}</div>
                     <div style="font-weight:bold; font-size:16px;">📞 ${o.tel}</div>
-                    <div style="font-size:12px; color:#777; margin:5px 0;">🏠 ${o.rem}</div>
-                    <div style="border-top:1px solid #EEE; padding-top:8px;">
-                        ${o.items.map(it => `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><span style="font-size:13px;">• ${it.name} x${it.qty}</span><div style="display:flex; gap:5px;"><button class="btn-status ${it.bought?'active':''}" onclick="updateStatus(${it.rowIdx}, 'bought', ${it.bought})">${it.bought?'已買✅':'未買❌'}</button><button class="btn-status shipped ${it.shipped?'active':''}" onclick="updateStatus(${it.rowIdx}, 'shipped', ${it.shipped})">${it.shipped?'已寄🚀':'未寄⏳'}</button></div></div>`).join('')}
+                    <div style="font-size:12px; color:#777;">🏠 ${o.rem}</div>
+                    <div style="border-top:1px solid #EEE; padding-top:8px; margin-top:8px;">
+                        ${o.items.map(it => `
+                            <div style="margin-bottom:10px;">
+                                <div style="display:flex; justify-content:space-between; font-size:13px;">
+                                    <span>• ${it.name} x${it.qty} ($${it.price})</span>
+                                    <div style="display:flex; gap:4px;">
+                                        <button class="btn-status ${it.bought?'active':''}" onclick="updateStatus(${it.rowIdx}, 'bought', ${it.bought})">${it.bought?'已買':'未買'}</button>
+                                        <button class="btn-status shipped ${it.shipped?'active':''}" onclick="updateStatus(${it.rowIdx}, 'shipped', ${it.shipped})">${it.shipped?'已寄':'未寄'}</button>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:5px; margin-top:5px;">
+                                    <span style="font-size:11px; color:#999;">成本:</span>
+                                    <input type="number" value="${it.cost}" style="padding:4px; font-size:11px; width:70px; margin:0;" onchange="updateCost(${it.rowIdx}, this.value)">
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <div style="text-align:right; font-weight:bold; color:var(--red); margin-top:5px;">總額: $${total}</div>
-                    <button onclick="showTemplate('${o.id}')" style="background:var(--green); color:white; margin-top:10px; border:none; padding:10px; border-radius:10px; font-weight:bold;">📋 生成出單通知</button>
+                    <div style="text-align:right; font-weight:bold; color:var(--red);">全單總額: $${total}</div>
+                    <button onclick="showTemplate('${o.id}')" style="background:var(--green); color:white; border:none; padding:8px; border-radius:8px; width:100%; margin-top:10px; font-weight:bold;">📋 生成出單通知</button>
                 </div>`;
             }).join('');
         }
@@ -146,6 +216,10 @@
             document.getElementById('loading').style.display = 'flex';
             await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type: 'UPDATE_STATUS', rowIdx, field, status: !status}) });
             location.reload();
+        }
+
+        async function updateCost(rowIdx, val) {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type: 'UPDATE_STATUS', rowIdx, field: 'cost', val: parseFloat(val)}) });
         }
 
         function showTemplate(id) {
@@ -166,7 +240,7 @@ ${items.map(it => `- ${it.name} x${it.qty} ($${it.price})`).join('\n')}
 
 ----------------------------
 付款資料 📄
-1. 麻煩在24小時內完成付款並回傳入數證明（截圖/入數紙）
+1. 麻煩在24小時內或者連線截單前完成付款並回傳入數證明（截圖/入數紙）
 2. 請在入數證明上備註電話號碼，緊記保留作證明
 3. 確認付款後會發送確認訂單訊息
 4. 收到確認訂單訊息後請再三核對訂單內容（產品內容/款式/數量），所有訂單一經確認後不可取消或更改，如未能成功購買，會全數退款
@@ -184,20 +258,19 @@ ${items.map(it => `- ${it.name} x${it.qty} ($${it.price})`).join('\n')}
             const filter = document.getElementById('buy-filter').value;
             let filtered = rawData.filter(r => r.name.toLowerCase().includes(search));
             if(filter === 'pending') filtered = filtered.filter(r => !r.bought);
-            if(filter === 'unpaid') filtered = filtered.filter(r => !r.paid);
 
             const buyMap = {};
             filtered.forEach(r => { if(!buyMap[r.name]) buyMap[r.name] = { total: 0, custs: [] }; buyMap[r.name].total += r.qty; buyMap[r.name].custs.push(r); });
 
             document.getElementById('buy-summary').innerHTML = Object.keys(buyMap).map(name => `
-                <div class="buy-group">
-                    <div style="padding:10px; font-weight:bold; background:#E0D7CC; display:flex; justify-content:space-between;"><span>📦 ${name}</span><span>總計: x${buyMap[name].total}</span></div>
-                    ${buyMap[name].custs.map(c => `<div style="padding:10px; font-size:12px; border-bottom:1px dashed #DDD; display:flex; justify-content:space-between; align-items:center;"><span>📞 ${c.tel} (x${c.qty}) ${c.paid?'[已付]':''}</span><button class="btn-status ${c.bought?'active':''}" onclick="updateStatus(${c.rowIdx}, 'bought', ${c.bought})">${c.bought?'已買':'未買'}</button></div>`).join('')}
+                <div class="card" style="border-left:5px solid var(--primary);">
+                    <div style="font-weight:bold; display:flex; justify-content:space-between;"><span>📦 ${name}</span><span style="color:var(--red)">總量: x${buyMap[name].total}</span></div>
+                    ${buyMap[name].custs.map(c => `<div style="padding:8px 0; font-size:12px; border-top:1px dashed #EEE; display:flex; justify-content:space-between; align-items:center;"><span>📞 ${c.tel} (x${c.qty}) ${c.paid?'[付]':''}</span><button class="btn-status ${c.bought?'active':''}" onclick="updateStatus(${c.rowIdx}, 'bought', ${c.bought})">${c.bought?'已買':'未買'}</button></div>`).join('')}
                 </div>
             `).join('');
         }
 
-        function copyToClipboard() { document.getElementById('copy-area').select(); document.execCommand('copy'); alert('文案已複製！'); closeModal(); }
+        function copyToClipboard() { document.getElementById('copy-area').select(); document.execCommand('copy'); alert('已複製！'); closeModal(); }
         function closeModal() { document.getElementById('copy-modal').style.display = 'none'; }
         function switchPage(p, btn) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
