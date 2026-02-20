@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V93</title>
+    <title>SlowOver CRM V94</title>
     <style>
-        :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --blue: #5C7CFA; --red: #E03131; --green: #25D366; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px 10px 120px 10px; }
+        :root { --primary: #D4A373; --bg: #FAF7F2; --text: #5F4B32; --blue: #5C7CFA; --red: #E03131; --dark-green: #2D6A4F; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px 10px 100px 10px; }
         .card { background: white; padding: 15px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 12px; }
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; border-top: 1px solid #EEE; padding-bottom: env(safe-area-inset-bottom); z-index: 1000; }
         .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 11px; color: #BBB; font-weight: bold; }
@@ -16,7 +16,7 @@
         input, textarea, button, select { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #E0D7CC; border-radius: 12px; font-size: 14px; box-sizing: border-box; }
         .item-row { background: #FDFBFA; padding: 12px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #F0E6D8; }
         .btn-status { border: 1px solid #DDD; background: #F9F9F9; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #777; width: auto; font-weight: bold; }
-        .btn-status.active { background: var(--green); color: white; border-color: var(--green); }
+        .btn-status.active { background: #40916C; color: white; border-color: #40916C; }
         .btn-status.shipped.active { background: var(--blue); border-color: var(--blue); }
         .total-row { display: flex; justify-content: space-between; font-weight: bold; color: var(--red); font-size: 18px; margin: 10px 0; }
         #copy-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
@@ -26,31 +26,29 @@
 </head>
 <body>
 
-    <div id="loading">⏳ 同步雲端數據中...</div>
+    <div id="loading">⏳ 雲端同步中...</div>
 
     <div id="copy-modal">
         <div class="modal-content">
             <h3 style="margin-top:0;">📋 訂單通知文案</h3>
             <textarea id="copy-area" readonly style="height: 350px; font-size: 12px; line-height: 1.5;"></textarea>
-            <button onclick="copyToClipboard()" style="background:var(--green); color:white; margin-top:10px;">一鍵複製</button>
-            <button onclick="closeModal()" style="background:#EEE; margin-top:5px;">關閉</button>
+            <button onclick="copyToClipboard()" style="background:var(--dark-green); color:white; margin-top:10px;">一鍵複製</button>
+            <button onclick="closeModal()" style="background:#EEE; color:#666; margin-top:5px;">關閉</button>
         </div>
     </div>
 
-    <div id="page-reg" class="page active">
-        <div class="card">
+    <div id="page-order" class="page active">
+        <div class="card" style="border: 2px solid var(--primary);">
             <h3 style="margin:0 0 10px 0; color:var(--primary);">📝 登記新訂單</h3>
             <input type="date" id="order-date">
             <input type="tel" id="cust-tel" placeholder="客戶 WhatsApp 電話">
             <div id="new-items-area"></div>
             <button onclick="addInputRow()" style="background:#F1F3F5; color:#666; border:1px dashed #CCC;">+ 增加商品</button>
-            <textarea id="order-rem" placeholder="📍 送貨地址 / 備註 (O 欄)"></textarea>
-            <div class="total-row"><span>訂單總計:</span><span id="total-display">$0</span></div>
-            <button onclick="saveOrder()" style="background:var(--primary); color:white; font-size:16px;">💾 儲存並同步</button>
+            <textarea id="order-rem" placeholder="📍 地址 / 備註"></textarea>
+            <div class="total-row"><span>本單總計:</span><span id="total-display">$0</span></div>
+            <button onclick="saveOrder()" style="background:var(--primary); color:white; font-size:16px; font-weight:bold;">💾 儲存並同步至雲端</button>
         </div>
-    </div>
-
-    <div id="page-list" class="page">
+        <hr style="border:0; border-top:1px solid #DDD; margin:20px 0;">
         <div id="order-list"></div>
     </div>
 
@@ -58,8 +56,12 @@
         <div class="card">
             <input type="text" id="buy-search" placeholder="🔍 搜尋商品..." oninput="renderBuy()">
             <select id="buy-filter" onchange="renderBuy()">
-                <option value="pending">🛒 待採買 (未買)</option>
-                <option value="all">全部項目</option>
+                <option value="pending">🛒 待採買 (所有未買項目)</option>
+                <option value="paid-notbought">✅ 已付款 / ❌ 未買</option>
+                <option value="unpaid-notbought">⏳ 未付款 / ❌ 未買</option>
+                <option value="unpaid-bought">⏳ 未付款 / ✅ 已買</option>
+                <option value="paid-bought">✅ 已付款 / ✅ 已買</option>
+                <option value="all">顯示所有項目</option>
             </select>
         </div>
         <div id="buy-summary"></div>
@@ -67,19 +69,22 @@
 
     <div id="page-fx" class="page">
         <div class="card">
-            <h3 style="margin-top:0; color:var(--primary);">💹 匯率助手設定</h3>
-            <label style="font-size:11px;">預設使用幣種</label>
-            <select id="fx-from"><option value="GBP">GBP 英鎊</option><option value="JPY">JPY 日圓</option><option value="KRW">KRW 韓幣</option><option value="EUR">EUR 歐羅</option><option value="USD">USD 美元</option></select>
+            <h3 style="margin-top:0; color:var(--primary);">💹 匯率助手設定 (外幣 ⮕ 港幣)</h3>
+            <label style="font-size:11px;">預設幣種</label>
+            <select id="fx-from">
+                <option value="GBP">GBP 英鎊</option><option value="JPY">JPY 日圓</option>
+                <option value="KRW">KRW 韓幣</option><option value="EUR">EUR 歐羅</option>
+                <option value="USD">USD 美元</option>
+            </select>
             <div id="rates-inputs"></div>
             <label style="font-size:11px;">手續費加成 %</label>
             <input type="number" id="fx-fee" step="0.1">
-            <button onclick="saveFX()" style="background:var(--blue); color:white;">💾 儲存匯率設定</button>
+            <button onclick="saveFX()" style="background:var(--blue); color:white;">💾 儲存匯率至雲端</button>
         </div>
     </div>
 
     <nav class="nav-bar">
-        <div class="nav-item active" onclick="switchPage('reg', this)">📝 登記</div>
-        <div class="nav-item" onclick="switchPage('list', this)">📋 訂單</div>
+        <div class="nav-item active" onclick="switchPage('order', this)">📝 訂單</div>
         <div class="nav-item" onclick="switchPage('buy', this)">🛍️ 採購</div>
         <div class="nav-item" onclick="switchPage('fx', this)">💹 匯率</div>
     </nav>
@@ -117,9 +122,7 @@
         async function saveFX() {
             settings.from = document.getElementById('fx-from').value;
             settings.fee = parseFloat(document.getElementById('fx-fee').value);
-            document.querySelectorAll('.fx-val').forEach(input => {
-                settings.rates[input.dataset.cur] = parseFloat(input.value);
-            });
+            document.querySelectorAll('.fx-val').forEach(input => { settings.rates[input.dataset.cur] = parseFloat(input.value); });
             document.getElementById('loading').style.display = 'flex';
             await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type: 'SAVE_SETTINGS', settings}) });
             location.reload();
@@ -143,7 +146,7 @@
         function applyFX(btn) {
             const pInput = btn.parentElement.querySelector('.i-p');
             const cur = settings.from;
-            const amt = prompt(`輸入 ${cur} 金額:`);
+            const amt = prompt(`輸入 ${cur} 外幣金額:`);
             if(amt) {
                 const rate = settings.rates[cur];
                 const fee = 1 + (settings.fee / 100);
@@ -166,7 +169,7 @@
 
         async function saveOrder() {
             const tel = document.getElementById('cust-tel').value;
-            if(!tel) return alert("輸入電話");
+            if(!tel) return alert("請輸入客戶電話");
             let its = [];
             document.querySelectorAll('.item-row').forEach(r => {
                 const n = r.querySelector('.i-n').value;
@@ -189,25 +192,25 @@
                     <div style="font-size:10px; color:#AAA;">#${o.id} | ${o.paid ? '✅已付' : '⏳未付'}</div>
                     <div style="font-weight:bold; font-size:16px;">📞 ${o.tel}</div>
                     <div style="font-size:12px; color:#777;">🏠 ${o.rem}</div>
-                    <div style="border-top:1px solid #EEE; padding-top:8px; margin-top:8px;">
+                    <div style="border-top:1px dotted #EEE; margin-top:10px; padding-top:10px;">
                         ${o.items.map(it => `
-                            <div style="margin-bottom:10px;">
-                                <div style="display:flex; justify-content:space-between; font-size:13px;">
-                                    <span>• ${it.name} x${it.qty} ($${it.price})</span>
-                                    <div style="display:flex; gap:4px;">
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:13px; flex:1;">• ${it.name} x${it.qty} ($${it.price})</span>
+                                    <div style="display:flex; gap:5px;">
                                         <button class="btn-status ${it.bought?'active':''}" onclick="updateStatus(${it.rowIdx}, 'bought', ${it.bought})">${it.bought?'已買':'未買'}</button>
                                         <button class="btn-status shipped ${it.shipped?'active':''}" onclick="updateStatus(${it.rowIdx}, 'shipped', ${it.shipped})">${it.shipped?'已寄':'未寄'}</button>
                                     </div>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:5px; margin-top:5px;">
-                                    <span style="font-size:11px; color:#999;">成本:</span>
-                                    <input type="number" value="${it.cost}" style="padding:4px; font-size:11px; width:70px; margin:0;" onchange="updateCost(${it.rowIdx}, this.value)">
+                                    <span style="font-size:11px; color:#999;">補入成本:</span>
+                                    <input type="number" value="${it.cost}" style="padding:4px; font-size:11px; width:80px; margin:0;" onchange="updateCost(${it.rowIdx}, this.value)">
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                    <div style="text-align:right; font-weight:bold; color:var(--red);">全單總額: $${total}</div>
-                    <button onclick="showTemplate('${o.id}')" style="background:var(--green); color:white; border:none; padding:8px; border-radius:8px; width:100%; margin-top:10px; font-weight:bold;">📋 生成出單通知</button>
+                    <div style="text-align:right; font-weight:bold; color:var(--red);">總額: $${total}</div>
+                    <button onclick="showTemplate('${o.id}')" style="background:var(--dark-green); color:white; border:none; padding:10px; border-radius:10px; width:100%; margin-top:10px; font-weight:bold;">📋 生成出單通知</button>
                 </div>`;
             }).join('');
         }
@@ -257,7 +260,12 @@ ${items.map(it => `- ${it.name} x${it.qty} ($${it.price})`).join('\n')}
             const search = document.getElementById('buy-search').value.toLowerCase();
             const filter = document.getElementById('buy-filter').value;
             let filtered = rawData.filter(r => r.name.toLowerCase().includes(search));
+            
             if(filter === 'pending') filtered = filtered.filter(r => !r.bought);
+            else if(filter === 'paid-notbought') filtered = filtered.filter(r => r.paid && !r.bought);
+            else if(filter === 'unpaid-notbought') filtered = filtered.filter(r => !r.paid && !r.bought);
+            else if(filter === 'unpaid-bought') filtered = filtered.filter(r => !r.paid && r.bought);
+            else if(filter === 'paid-bought') filtered = filtered.filter(r => r.paid && r.bought);
 
             const buyMap = {};
             filtered.forEach(r => { if(!buyMap[r.name]) buyMap[r.name] = { total: 0, custs: [] }; buyMap[r.name].total += r.qty; buyMap[r.name].custs.push(r); });
@@ -265,12 +273,12 @@ ${items.map(it => `- ${it.name} x${it.qty} ($${it.price})`).join('\n')}
             document.getElementById('buy-summary').innerHTML = Object.keys(buyMap).map(name => `
                 <div class="card" style="border-left:5px solid var(--primary);">
                     <div style="font-weight:bold; display:flex; justify-content:space-between;"><span>📦 ${name}</span><span style="color:var(--red)">總量: x${buyMap[name].total}</span></div>
-                    ${buyMap[name].custs.map(c => `<div style="padding:8px 0; font-size:12px; border-top:1px dashed #EEE; display:flex; justify-content:space-between; align-items:center;"><span>📞 ${c.tel} (x${c.qty}) ${c.paid?'[付]':''}</span><button class="btn-status ${c.bought?'active':''}" onclick="updateStatus(${c.rowIdx}, 'bought', ${c.bought})">${c.bought?'已買':'未買'}</button></div>`).join('')}
+                    ${buyMap[name].custs.map(c => `<div style="padding:8px 0; font-size:12px; border-top:1px dashed #EEE; display:flex; justify-content:space-between; align-items:center;"><span>📞 ${c.tel} (x${c.qty}) ${c.paid?'[✅已付]':'[⏳未付]'}</span><button class="btn-status ${c.bought?'active':''}" onclick="updateStatus(${c.rowIdx}, 'bought', ${c.bought})">${c.bought?'已買':'未買'}</button></div>`).join('')}
                 </div>
             `).join('');
         }
 
-        function copyToClipboard() { document.getElementById('copy-area').select(); document.execCommand('copy'); alert('已複製！'); closeModal(); }
+        function copyToClipboard() { document.getElementById('copy-area').select(); document.execCommand('copy'); alert('文案已複製！'); closeModal(); }
         function closeModal() { document.getElementById('copy-modal').style.display = 'none'; }
         function switchPage(p, btn) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
