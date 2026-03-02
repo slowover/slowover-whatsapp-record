@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V101</title>
+    <title>SlowOver CRM V105</title>
     <style>
         :root { 
             --bg: #FAF7F2; --card: #FFFFFF; --text: #5F4B32; 
@@ -37,18 +37,16 @@
 
         .editable-label { border-bottom: 1px dashed #CCC; cursor: pointer; padding: 2px 0; display: inline-block; }
         .item-box { background: #FDFBFA; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #F0EAE2; position: relative; }
-        .btn-del-item { position: absolute; right: 8px; top: 8px; color: #CCC; font-size: 12px; padding: 5px; }
+        .btn-del-item { position: absolute; right: 8px; top: 8px; color: #CCC; font-size: 16px; padding: 5px; }
 
         .btn-buy-toggle { padding: 6px 12px; font-size: 11px; border-radius: 8px; min-width: 65px; }
         .btn-whatsapp { background: var(--btn-green); color: white; width: 100%; margin-top: 15px; font-size: 14px; }
-        
-        .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #EEE; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div id="loading">☕ 正在處理中...</div>
-    <button class="btn-sync" onclick="syncFromCloud()">🔄 立即同步雲端數據</button>
+    <div id="loading">☕ 正在同步中...</div>
+    <button class="btn-sync" onclick="syncFromCloud()">🔄 手動整理數據</button>
 
     <div id="page-order" class="page active">
         <div class="card" style="border: 2px solid var(--primary);">
@@ -62,7 +60,7 @@
             <button onclick="addInputRow()" style="background:#F0EAE2; width:100%; color:var(--text); margin-bottom:12px;">+ 增加商品項目</button>
             <textarea id="order-rem" placeholder="📍 地址 / 備註"></textarea>
             <div style="text-align:right; margin:10px 0; font-size:20px;">總額: <span style="color:var(--important); font-weight:bold;" id="total-display">$0</span></div>
-            <button class="btn-save" onclick="saveOrder()">💾 儲存訂單</button>
+            <button class="btn-save" onclick="saveOrder()">💾 儲存並上傳新單</button>
         </div>
         <input type="text" id="search-order" placeholder="🔍 搜尋電話、單號、商品..." oninput="renderOrders()" style="margin-bottom:15px;">
         <div id="order-list"></div>
@@ -91,15 +89,14 @@
 
     <div id="page-settings" class="page">
         <div class="card">
-            <h3>💹 匯率助手 (兌換 HKD)</h3>
-            <div class="stat-row"><span>韓幣 KRW (1000)</span> <input type="number" id="rate-krw" value="5.8" style="width:80px; margin:0;"></div>
-            <div class="stat-row"><span>日圓 JPY (100)</span> <input type="number" id="rate-jpy" value="5.2" style="width:80px; margin:0;"></div>
-            <div class="stat-row"><span>美元 USD</span> <input type="number" id="rate-usd" value="7.8" style="width:80px; margin:0;"></div>
-            <div class="stat-row"><span>歐羅 EUR</span> <input type="number" id="rate-eur" value="8.5" style="width:80px; margin:0;"></div>
+            <h3>💹 匯率參考 (1外幣 = ? HKD)</h3>
+            <div>韓幣 KRW (1000): <input type="number" id="rate-krw" value="5.8" style="width:100px;"></div>
+            <div>日圓 JPY (100): <input type="number" id="rate-jpy" value="5.2" style="width:100px;"></div>
+            <div>美元 USD: <input type="number" id="rate-usd" value="7.8" style="width:100px;"></div>
+            <div>歐羅 EUR: <input type="number" id="rate-eur" value="8.5" style="width:100px;"></div>
         </div>
         <div class="card">
-            <h3>🔢 單號管理</h3>
-            <label style="font-size:12px;">下一個流水號</label>
+            <h3>🔢 流水號設定</h3>
             <input type="number" id="manual-serial">
             <button onclick="updateSerial()" style="background:var(--primary); color:white; width:100%; margin-top:10px;">更新流水號</button>
         </div>
@@ -113,10 +110,9 @@
     </nav>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxPcskRvFZoka0kzvUo7zcj7qQOkwt2QGVIvdJf6R_-iQl9somIDcFtstCFJujAIP-o/exec"; 
+        const GAS_URL = "你的_GAS_網址"; 
         let rawData = [], serial = 402;
 
-        // 生成單號：WS + 26 + 月份縮寫 + 流水號
         function getOrderNum(s) {
             const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
             const d = new Date();
@@ -137,11 +133,34 @@
             finally { document.getElementById('loading').style.display = 'none'; }
         }
 
+        // 優化重點：背景更新，UI 先變
         async function updateField(rowIdx, field, val) {
-            if(val === null || val === undefined) return;
-            document.getElementById('loading').style.display = 'flex';
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type:'UPDATE_FIELD', rowIdx, field, val}) });
-            await syncFromCloud();
+            if(val === null) return;
+            
+            // 1. 立即更新本地數據，讓畫面秒變
+            const idx = rawData.findIndex(r => r.rowIdx === rowIdx);
+            if(idx > -1) {
+                if(val === 'DELETE_ROW') {
+                    rawData.splice(idx, 1);
+                } else {
+                    if(field === 'paid') rawData[idx].paid = (val === '✅已付');
+                    if(field === 'bought') rawData[idx].bought = (val === '✅已買');
+                    if(field === 'tel') rawData[idx].tel = val;
+                    if(field === 'name') rawData[idx].name = val;
+                    if(field === 'qty') rawData[idx].qty = Number(val);
+                    if(field === 'price') rawData[idx].price = Number(val);
+                    if(field === 'rem') rawData[idx].rem = val;
+                }
+            }
+            renderOrders();
+            if(document.getElementById('page-buy').classList.contains('active')) renderBuy();
+
+            // 2. 背景發送請求，不阻塞用戶操作
+            fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors', // 關鍵：不等待回傳，速度極快
+                body: JSON.stringify({type:'UPDATE_FIELD', rowIdx, field, val})
+            });
         }
 
         function renderOrders() {
@@ -149,8 +168,8 @@
             const q = document.getElementById('search-order').value.toLowerCase();
             const grouped = {};
             
-            // 倒序排列，最新在最上
-            const sorted = [...rawData].reverse();
+            // 最新的訂單排在上面 (根據 rowIdx 倒序)
+            const sorted = [...rawData].sort((a,b) => b.rowIdx - a.rowIdx);
 
             sorted.forEach(r => {
                 if(r.tel.includes(q) || r.id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)) {
@@ -162,18 +181,18 @@
             list.innerHTML = Object.values(grouped).map(o => `
                 <div class="card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span style="font-size:12px; color:#AAA;">#${o.id}</span>
+                        <span style="font-size:11px; color:#BBB;">#${o.id}</span>
                         <button class="btn-pay-status ${o.paid?'status-paid':'status-unpaid'}" 
                                 onclick="updateField(${o.items[0].rowIdx}, 'paid', '${o.paid?'⏳未付':'✅已付'}')">
                             ${o.paid?'✅ 已付':'⏳ 未付'}
                         </button>
                     </div>
                     <b class="editable-label" onclick="updateField(${o.items[0].rowIdx}, 'tel', prompt('修改電話', '${o.tel}'))">📞 ${o.tel}</b><br>
-                    <small class="editable-label" style="color:#888; margin-top:5px;" onclick="updateField(${o.items[0].rowIdx}, 'rem', prompt('修改地址/備註', '${o.rem}'))">📍 ${o.rem || '無備註'}</small>
+                    <small class="editable-label" style="color:#888;" onclick="updateField(${o.items[0].rowIdx}, 'rem', prompt('修改備註', '${o.rem}'))">📍 ${o.rem || '無備註'}</small>
                     <div style="margin-top:12px; border-top:1px solid #EEE; padding-top:10px;">
                         ${o.items.map(it => `
                             <div class="item-box">
-                                <span class="btn-del-item" onclick="if(confirm('確定刪除此商品？')) updateField(${it.rowIdx}, 'name', 'DELETE_ROW')">🗑️</span>
+                                <span class="btn-del-item" onclick="if(confirm('確定刪除此商品？')) updateField(${it.rowIdx}, 'name', 'DELETE_ROW')">×</span>
                                 <div class="editable-label" onclick="updateField(${it.rowIdx}, 'name', prompt('修改品名', '${it.name}'))"><b>${it.name}</b></div>
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                                     <span style="font-size:14px;">
@@ -189,7 +208,7 @@
                             </div>
                         `).join('')}
                     </div>
-                    <button class="btn-whatsapp" onclick="generateMsg('${o.id}')">📋 複製出單通知</button>
+                    <button class="btn-whatsapp" onclick="generateMsg('${o.id}')">📋 複製確認通知</button>
                 </div>
             `).join('');
         }
@@ -214,12 +233,12 @@
 
             document.getElementById('buy-summary').innerHTML = Object.keys(buyMap).map(name => `
                 <div class="card" style="border-left:5px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <b>📦 ${name}</b> <span style="color:var(--important); font-weight:bold;">x${buyMap[name].total}</span>
                     </div>
                     ${buyMap[name].custs.map(c => `
                         <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:5px; background:#F9F7F5; padding:8px; border-radius:8px;">
-                            <span>${c.tel} (x${c.qty}) <small style="color:#AAA;">#${c.id}</small></span>
+                            <span>${c.tel} (x${c.qty})</span>
                             <button onclick="updateField(${c.rowIdx}, 'bought', '✅已買')" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:10px;">標記已買</button>
                         </div>
                     `).join('')}
@@ -227,19 +246,47 @@
             `).join('');
         }
 
+        async function saveOrder() {
+            const id = document.getElementById('order-id').value;
+            const tel = document.getElementById('cust-tel').value;
+            const date = document.getElementById('order-date').value;
+            if(!id || !tel) return alert("請填寫單號及電話");
+            let its = [];
+            document.querySelectorAll('#new-items-area .item-box').forEach(r => {
+                const n = r.querySelector('.i-n').value;
+                if(n) its.push({ name: n, qty: parseInt(r.querySelector('.i-q').value), price: parseFloat(r.querySelector('.i-p').value) });
+            });
+            if(its.length === 0) return alert("請輸入至少一個商品");
+
+            document.getElementById('loading').style.display = 'flex';
+            const payload = { type:'UPDATE_SINGLE', order: {id, date, tel, rem: document.getElementById('order-rem').value, items: its}, nextSerial: serial+1 };
+            
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            
+            // 儲存後重設輸入框，並僅同步一次
+            document.getElementById('cust-tel').value = "";
+            document.getElementById('new-items-area').innerHTML = "";
+            addInputRow();
+            await syncFromCloud();
+            alert("✅ 訂單儲存成功");
+        }
+
+        // 統計與設定頁面邏輯
+        function switchPage(p, btn) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            btn.classList.add('active');
+            if(p==='buy') renderBuy();
+            if(p==='stats') renderStats();
+        }
+
         function renderStats() {
             let rev=0, cost=0;
             const html = rawData.map(it => {
-                const itemTotal = it.price * it.qty;
-                const itemCost = it.cost * it.qty;
-                rev += itemTotal; cost += itemCost;
-                return `<div class="card">
-                    <div style="display:flex; justify-content:space-between;"><b>${it.name}</b> <span>$${itemTotal}</span></div>
-                    <div class="stat-row" style="border:none; margin-top:5px;">
-                        <span style="color:#999;">成本: <input type="number" value="${it.cost}" style="width:60px; padding:2px; margin:0;" onchange="updateField(${it.rowIdx}, 'cost', this.value)"></span>
-                        <span style="color:var(--btn-green); font-weight:bold;">利潤: $${itemTotal - itemCost}</span>
-                    </div>
-                </div>`;
+                rev += (it.price * it.qty); cost += (it.cost * it.qty);
+                return `<div class="card"><b>${it.name}</b> (x${it.qty})<br>
+                        利潤: $${(it.price - it.cost) * it.qty} | 成本: <input type="number" value="${it.cost}" style="width:60px; padding:2px;" onchange="updateField(${it.rowIdx}, 'cost', this.value)"></div>`;
             }).join('');
             document.getElementById('stat-rev').innerText = `$${rev}`;
             document.getElementById('stat-cost').innerText = `$${cost}`;
@@ -253,53 +300,25 @@
             const total = its.reduce((s, it) => s + (it.price*it.qty), 0);
             const d = new Date(o.date);
             const cleanDate = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-
-            const msg = `【SlowOver 訂購確認】✨\n\n📌 訂單編號：${o.id}\n📅 訂購日期：${cleanDate}\n📦 訂購項目：\n${its.map(it => `- ${it.name} x${it.qty} ($${it.price})`).join('\n')}\n\n💰 總金額：HKD $${total}\n📍 地址/備註：${o.rem || "無"}\n\n----------------------------\n💸 付款方式：\nPayMe：\nhttps://qr.payme.hsbc.com.hk/2/Ui316pJ5T8b428yzTSbr4J\n\n快速支付系統識別碼 FPS ID：105249023\n名稱：slow over\n\n⚠️ 注意事項：\n下單即同意以下條款：\n1. 24小時內完成付款並回傳入數截圖。\n2. 截圖請備註或訊息電話號碼以便對賬。\n3. 訂單一經確認，不設取消、退換或更改。\n4. 如遇商品缺貨，將會全數退款。\n5. 一般預訂需時 7-30 個工作天，不接急單。\n6. 運送過程如有損壞風險需由買家承擔。\n7. SLOWOVER 保留最終決定權。\n\n感謝支持 SLOWOVER！`;
-            
+            const msg = `【SlowOver 訂購確認】✨\n\n📌 訂單編號：${o.id}\n📅 訂購日期：${cleanDate}\n📦 訂購項目：\n${its.map(it => `- ${it.name} x${it.qty} ($${it.price})`).join('\n')}\n\n💰 總金額：HKD $${total}\n📍 地址/備註：${o.rem || "無"}\n\n----------------------------\n💸 付款方式：\nPayMe：\nhttps://qr.payme.hsbc.com.hk/2/Ui316pJ5T8b428yzTSbr4J\n\n快速支付系統識別碼 FPS ID：105249023\n名稱：slow over\n\n感謝支持 SLOWOVER！`;
             const el = document.createElement('textarea');
             el.value = msg; document.body.appendChild(el);
             el.select(); document.execCommand('copy');
             document.body.removeChild(el);
-            alert("✅ 出單文案已複製");
-        }
-
-        function switchPage(p, btn) {
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
-            document.getElementById('page-' + p).classList.add('active');
-            btn.classList.add('active');
-            if(p==='buy') renderBuy();
-            if(p==='stats') renderStats();
+            alert("✅ 文案已複製");
         }
 
         function addInputRow() {
             const d = document.createElement('div'); d.className = 'item-box';
-            d.innerHTML = `<input type="text" class="i-n" placeholder="品名" style="width:100%"><div style="display:flex; gap:8px; margin-top:5px;"><input type="number" class="i-q" value="1" style="flex:1" placeholder="數量"><input type="number" class="i-p" placeholder="售價" style="flex:2" oninput="calcTotal()"></div>`;
+            d.innerHTML = `<input type="text" class="i-n" placeholder="品名" style="width:100%"><div style="display:flex; gap:8px; margin-top:5px;"><input type="number" class="i-q" value="1" style="flex:1"><input type="number" class="i-p" placeholder="售價" style="flex:2" oninput="calcTotal()"></div>`;
             document.getElementById('new-items-area').appendChild(d);
         }
 
         function calcTotal() {
             let t = 0; document.querySelectorAll('.item-box').forEach(r => {
-                const q = r.querySelector('.i-q')?.value || 0;
-                const p = r.querySelector('.i-p')?.value || 0;
-                t += (q * p);
+                t += ( (r.querySelector('.i-q')?.value || 0) * (r.querySelector('.i-p')?.value || 0) );
             });
             document.getElementById('total-display').innerText = `$${t}`;
-        }
-
-        async function saveOrder() {
-            const id = document.getElementById('order-id').value;
-            const tel = document.getElementById('cust-tel').value;
-            const date = document.getElementById('order-date').value;
-            if(!id || !tel) return alert("請填寫單號及電話");
-            let its = [];
-            document.querySelectorAll('#new-items-area .item-box').forEach(r => {
-                const n = r.querySelector('.i-n').value;
-                if(n) its.push({ name: n, qty: parseInt(r.querySelector('.i-q').value), price: parseFloat(r.querySelector('.i-p').value) });
-            });
-            document.getElementById('loading').style.display = 'flex';
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type:'UPDATE_SINGLE', order: {id, date, tel, rem: document.getElementById('order-rem').value, items: its}, nextSerial: serial+1}) });
-            location.reload();
         }
 
         async function updateSerial() {
@@ -308,11 +327,7 @@
             syncFromCloud();
         }
 
-        window.onload = () => { 
-            document.getElementById('order-date').valueAsDate = new Date(); 
-            addInputRow(); 
-            syncFromCloud(); 
-        };
+        window.onload = () => { syncFromCloud(); addInputRow(); document.getElementById('order-date').valueAsDate = new Date(); };
     </script>
 </body>
 </html>
