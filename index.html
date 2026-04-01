@@ -3,102 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V111</title>
+    <title>SlowOver CRM V112</title>
     <style>
         :root { --bg: #F8F5F2; --card: #FFF; --text: #5D4037; --primary: #D4A373; --accent: #A64444; --green: #6B8E23; --blue: #5D8AA8; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
-        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #FFF; display: flex; border-top: 1px solid #EEE; padding-bottom: env(safe-area-inset-bottom); z-index: 1000; }
-        .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 12px; color: #AAA; cursor: pointer; }
-        .nav-item.active { color: var(--primary); font-weight: bold; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
         
-        .page { display: none; padding: 15px; max-width: 600px; margin: 0 auto; }
+        /* iPhone 貼合修復 */
+        .page { display: none; padding: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
         .page.active { display: block; }
         
-        .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-box { background: var(--card); padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid var(--primary); }
-        .stat-box h4 { margin: 0; font-size: 12px; color: #888; }
-        .stat-box p { margin: 5px 0 0 0; font-size: 18px; font-weight: bold; }
-
-        .filter-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-        .filter-btn { padding: 6px 15px; background: #EEE; border-radius: 20px; font-size: 13px; white-space: nowrap; border: none; }
-        .filter-btn.active { background: var(--primary); color: white; }
-
-        .progress-container { background: #EEE; border-radius: 10px; height: 8px; margin: 10px 0; overflow: hidden; }
-        .progress-bar { background: var(--green); height: 100%; transition: width 0.3s; }
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #FFF; display: flex; border-top: 1px solid #EEE; padding-bottom: env(safe-area-inset-bottom); z-index: 1000; }
+        .nav-item { flex: 1; padding: 12px 0; text-align: center; font-size: 11px; color: #AAA; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
         
-        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; margin-right: 4px; }
-        .bg-unpaid { background: #BBB; } .bg-paid { background: var(--primary); } .bg-arrived { background: var(--green); } .bg-shipped { background: var(--blue); }
+        .card { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); width: 100%; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .stat-box { background: var(--card); padding: 12px; border-radius: 10px; text-align: center; border-bottom: 3px solid var(--primary); }
+        .stat-box h4 { margin: 0; font-size: 11px; color: #888; }
+        .stat-box p { margin: 3px 0 0 0; font-size: 16px; font-weight: bold; }
 
-        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #DDD; border-radius: 8px; margin-top: 5px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .item-line { font-size: 13px; color: #666; background: #F9F9F9; padding: 4px 8px; border-radius: 4px; margin-top: 4px; }
+        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; margin-right: 4px; display: inline-block; }
+        .bg-unpaid { background: #BBB; } .bg-paid { background: var(--primary); }
+        
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #DDD; border-radius: 8px; font-size: 16px; margin-top: 5px; }
+        .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
         .btn-p { background: var(--primary); color: white; }
-        .btn-s { background: #F5F5F5; color: var(--text); border: 1px solid #DDD; }
+        .btn-s { background: #F2F2F2; color: #666; }
 
-        /* 詳情頁 Overlay */
-        #detail-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        /* 詳情頁全屏遮罩 */
+        #detail-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #F8F5F2; z-index: 2000; display: none; overflow-y: auto; padding: 20px 15px; padding-top: env(safe-area-inset-top); }
+        .back-btn { background: none; border: none; font-size: 16px; color: var(--primary); font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; }
+        
+        .progress-bar-bg { background: #EEE; border-radius: 10px; height: 6px; margin: 8px 0; }
+        .progress-bar-fill { background: var(--green); height: 100%; border-radius: 10px; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
+    <div id="sync-toast" style="position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.6); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; display:none; z-index:3000;">同步中...</div>
+
     <div id="page-stats" class="page active">
-        <select id="stat-month" onchange="renderStats()" style="margin-bottom: 15px;"></select>
-        <div class="stat-grid">
-            <div class="stat-box"><h4>訂單總數</h4><p id="s-count">0</p></div>
-            <div class="stat-box"><h4>總營業額</h4><p id="s-rev">$0</p></div>
+        <select id="stat-month" onchange="renderStats()"></select>
+        <div class="stat-grid" style="margin-top:12px;">
+            <div class="stat-box"><h4>訂單 (已付/總數)</h4><p id="s-count">0/0</p></div>
+            <div class="stat-box"><h4>營業額 (已收/總額)</h4><p id="s-rev">$0</p></div>
             <div class="stat-box"><h4>總成本</h4><p id="s-cost">$0</p></div>
-            <div class="stat-box"><h4>預計純利</h4><p id="s-profit">$0</p></div>
+            <div class="stat-box"><h4>純利</h4><p id="s-profit">$0</p></div>
         </div>
         <div id="stat-items"></div>
     </div>
 
     <div id="page-order" class="page">
         <div class="card">
-            <h3>📝 登記新單</h3>
+            <h3>登記新單</h3>
             <input type="tel" id="new-tel" placeholder="客戶電話">
             <div id="new-items"></div>
-            <button class="btn btn-s" onclick="addNewItemRow()">+ 增加商品</button>
-            <button class="btn btn-p" onclick="saveNewOrder()">儲存訂單</button>
+            <button class="btn btn-s" style="margin-top:10px;" onclick="addNewItemRow()">+ 增加商品</button>
+            <button class="btn btn-p" style="margin-top:10px;" onclick="saveNewOrder()">儲存訂單</button>
         </div>
-
         <input type="text" id="search-order" placeholder="🔍 搜尋電話/單號/品名..." oninput="renderOrders()">
-        <div class="filter-bar">
-            <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
-            <button class="filter-btn" onclick="setFilter('unpaid', this)">未付款</button>
-            <button class="filter-btn" onclick="setFilter('unbought', this)">含未買</button>
-            <button class="filter-btn" onclick="setFilter('overdue', this)">⚠️ 逾期未付</button>
-        </div>
-        <div id="order-list"></div>
+        <div id="order-list" style="margin-top:12px;"></div>
     </div>
 
     <div id="page-buy" class="page">
+        <div class="card" style="text-align:center; background: var(--primary); color:white;">
+            <h2 id="buy-pending-count" style="margin:0;">0</h2>
+            <p style="margin:0; font-size:12px;">待採購商品總數</p>
+        </div>
         <div id="buy-list"></div>
     </div>
 
     <div id="page-settings" class="page">
         <div class="card">
-            <h3>🔢 訂單編號設定</h3>
-            <p style="font-size: 12px; color: #888;">目前單號：<span id="current-id-preview"></span></p>
-            <input type="number" id="cfg-serial" placeholder="下一個起始編號 (例如 201)">
-            <button class="btn btn-s" onclick="saveConfig()">更新編號</button>
+            <h3>單號及基礎設定</h3>
+            <input type="number" id="cfg-serial" placeholder="起始編號">
+            <button class="btn btn-s" onclick="saveConfig()">更新</button>
         </div>
         <div class="card">
-            <h3>📥 批量匯入</h3>
-            <textarea id="batch-input" rows="4" placeholder="格式：電話 商品x數量 價格 (多行匯入)"></textarea>
+            <h3>批量匯入</h3>
+            <textarea id="batch-input" rows="3" placeholder="電話 商品x數量 價格"></textarea>
             <button class="btn btn-p" onclick="importBatch()">立即匯入</button>
         </div>
         <div class="card">
-            <h3>💳 付款及條款設定</h3>
+            <h3>付款資料</h3>
             <input type="text" id="cfg-payme" placeholder="PayMe 連結">
             <input type="text" id="cfg-fps-id" placeholder="FPS ID">
-            <input type="text" id="cfg-fps-name" placeholder="FPS 名稱">
-            <textarea id="cfg-terms" rows="4" placeholder="注意事項及條款"></textarea>
-            <button class="btn btn-p" onclick="saveConfig()">儲存所有設定</button>
+            <input type="text" id="cfg-fps-name" placeholder="名稱">
+            <textarea id="cfg-terms" rows="3" placeholder="條款"></textarea>
+            <button class="btn btn-p" onclick="saveConfig()">儲存所有</button>
         </div>
     </div>
 
     <div id="detail-overlay">
-        <button class="btn btn-s" style="width: 80px;" onclick="closeDetail()">← 返回</button>
+        <button class="back-btn" onclick="closeDetail()">‹ 返回</button>
         <div id="detail-content"></div>
     </div>
 
@@ -110,22 +109,21 @@
     </nav>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxPcskRvFZoka0kzvUo7zcj7qQOkwt2QGVIvdJf6R_-iQl9somIDcFtstCFJujAIP-o/exec";
-        let rawData = [], config = {}, currentFilter = 'all';
+        const GAS_URL = "你的_GAS_網址";
+        let rawData = [], config = {};
 
         async function sync() {
-            const r = await fetch(GAS_URL + "?t=" + Date.now());
-            const res = await r.json();
-            rawData = res.orders;
-            config = res;
-            updateUI();
+            document.getElementById('sync-toast').style.display = 'block';
+            try {
+                const r = await fetch(GAS_URL + "?t=" + Date.now());
+                rawData = (await r.json()).orders;
+                config = await (await fetch(GAS_URL + "?t=" + Date.now())).json(); // 再次獲取完整 config
+                updateUI();
+            } finally { document.getElementById('sync-toast').style.display = 'none'; }
         }
 
         function updateUI() {
-            renderStats();
-            renderOrders();
-            renderBuy();
-            document.getElementById('current-id-preview').innerText = getOrderNum(config.serial);
+            renderStats(); renderOrders(); renderBuy();
             document.getElementById('cfg-serial').value = config.serial;
             document.getElementById('cfg-payme').value = config.payme;
             document.getElementById('cfg-fps-id').value = config.fpsId;
@@ -133,243 +131,159 @@
             document.getElementById('cfg-terms').value = config.terms;
         }
 
-        function getOrderNum(s) {
-            const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-            return `WS26${months[new Date().getMonth()]}${String(s).padStart(3, '0')}`;
-        }
-
-        // --- 訂單分組與渲染 ---
         function renderOrders() {
             const container = document.getElementById('order-list');
             const q = document.getElementById('search-order').value.toLowerCase();
-            const now = Date.now();
-
             const grouped = {};
             rawData.forEach(r => {
-                if(!grouped[r.id]) grouped[r.id] = { ...r, items: [], allBought: true };
+                if(!grouped[r.id]) grouped[r.id] = { ...r, items: [] };
                 grouped[r.id].items.push(r);
-                if(!r.bought) grouped[r.id].allBought = false;
             });
-
-            let list = Object.values(grouped).sort((a,b) => b.paidAt - a.paidAt || b.rowIdx - a.rowIdx);
-
-            if(currentFilter === 'unpaid') list = list.filter(o => !o.paid);
-            if(currentFilter === 'unbought') list = list.filter(o => !o.allBought);
-            if(currentFilter === 'overdue') list = list.filter(o => !o.paid && (now - new Date(o.date).getTime() > 86400000));
+            let list = Object.values(grouped).sort((a,b) => b.rowIdx - a.rowIdx);
             if(q) list = list.filter(o => o.tel.includes(q) || o.id.toLowerCase().includes(q) || o.items.some(i => i.name.toLowerCase().includes(q)));
 
             container.innerHTML = list.map(o => `
                 <div class="card" onclick="openDetail('${o.id}')">
-                    <div style="display:flex; justify-content:space-between;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <b>📞 ${o.tel}</b>
-                        <span><span class="badge ${o.paid?'bg-paid':'bg-unpaid'}">${o.paid?'已付':'未付'}</span></span>
+                        <span class="badge ${o.paid?'bg-paid':'bg-unpaid'}">${o.paid?'已付':'未付'}</span>
                     </div>
-                    <div style="font-size:12px; color:#888; margin-top:5px;">#${o.id} | ${o.items.length}件商品</div>
-                    <div style="margin-top:5px;">
-                        ${o.arrived?'<span class="badge bg-arrived">已到貨</span>':''}
-                        ${o.shipped?'<span class="badge bg-shipped">已出貨</span>':''}
+                    <div style="margin-top:8px;">
+                        ${o.items.map(i => `<div class="item-line">${i.name} x${i.qty}</div>`).join('')}
                     </div>
                 </div>
             `).join('');
         }
 
-        // --- 訂單詳情頁 ---
         function openDetail(id) {
             const its = rawData.filter(r => r.id === id);
             const o = its[0];
             const total = its.reduce((s, i) => s + (i.price * i.qty), 0);
-            
             document.getElementById('detail-content').innerHTML = `
-                <h2 style="margin-bottom:5px;">訂單詳情</h2>
-                <p>單號：${o.id} | 日期：${new Date(o.date).toLocaleDateString()}</p>
                 <div class="card">
-                    <p>客戶電話：<b>${o.tel}</b></p>
-                    <button class="btn btn-p" onclick="updateOrder('${o.id}', 'paid', '${o.paid?'⏳未付':'✅已付'}')">切換付款：${o.paid?'✅已付':'⏳未付'}</button>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                        <button class="btn btn-s" onclick="updateOrder('${o.id}', 'arrived', '${o.arrived?'❌未到':'✅已到'}')">到貨：${o.arrived?'✅':'❌'}</button>
-                        <button class="btn btn-s" onclick="updateOrder('${o.id}', 'shipped', '${o.shipped?'❌未出':'✅已出'}')">出貨：${o.shipped?'✅':'❌'}</button>
+                    <p style="margin:0; font-size:12px; color:#999;">單號 #${o.id}</p>
+                    <h2 style="margin:5px 0;">${o.tel}</h2>
+                    <button class="btn btn-p" onclick="updateOrderField('${o.id}', 'paid', '${o.paid?'⏳未付':'✅已付'}')">付款：${o.paid?'✅已收':'⏳未收'}</button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                        <button class="btn btn-s" onclick="updateOrderField('${o.id}', 'arrived', '${o.arrived?'❌未到':'✅已到'}')">到貨：${o.arrived?'✅':'❌'}</button>
+                        <button class="btn btn-s" onclick="updateOrderField('${o.id}', 'shipped', '${o.shipped?'❌未出':'✅已出'}')">出貨：${o.shipped?'✅':'❌'}</button>
                     </div>
                 </div>
-                <h3>商品明細</h3>
+                <h3>商品明細 (點擊可編輯)</h3>
                 ${its.map(it => `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
+                    <div class="card" style="border-left: 4px solid var(--primary);">
+                        <div onclick="editItemDetail(${it.rowIdx}, '${it.name}', ${it.qty}, ${it.price})">
                             <b>${it.name}</b><br>
-                            <small>$${it.price} x ${it.qty}</small>
+                            <span style="color:var(--accent); font-weight:bold;">$${it.price} x ${it.qty}</span>
                         </div>
-                        <button class="btn btn-s" style="width:auto; padding:5px 10px;" onclick="updateSingle(${it.rowIdx}, 'bought', '${it.bought?'❌未買':'✅已買'}')">
-                            ${it.bought?'✅已購':'❌未購'}
+                        <button class="btn btn-s" style="margin-top:8px; font-size:12px; padding:6px;" onclick="updateItemField(${it.rowIdx}, 'bought', '${it.bought?'❌未買':'✅已買'}')">
+                            採購狀態：${it.bought?'✅已買':'❌未買'}
                         </button>
                     </div>
                 `).join('')}
-                <div style="text-align:right; font-size:20px; font-weight:bold; margin:20px 0;">合計：$${total}</div>
-                <button class="btn btn-p" onclick="copyNotify('${o.id}')">📋 複製訂單通知及條款</button>
+                <div style="text-align:right; font-size:18px; font-weight:bold; margin-top:10px;">總計：$${total}</div>
+                <button class="btn btn-p" style="margin-top:15px;" onclick="copyNotify('${o.id}')">📋 複製出單通知</button>
             `;
             document.getElementById('detail-overlay').style.display = 'block';
         }
 
-        // --- 採購頁面 (含進度條) ---
-        function renderBuy() {
-            const summary = {};
-            rawData.forEach(r => {
-                if(!summary[r.name]) summary[r.name] = { total: 0, bought: 0, orders: [] };
-                summary[r.name].total += r.qty;
-                if(r.bought) summary[r.name].bought += r.qty;
-                summary[r.name].orders.push(r);
-            });
-
-            document.getElementById('buy-list').innerHTML = Object.entries(summary).map(([name, data]) => {
-                const percent = (data.bought / data.total) * 100;
-                return `
-                    <div class="card">
-                        <div style="display:flex; justify-content:space-between;"><b>📦 ${name}</b> <span>${data.bought}/${data.total}</span></div>
-                        <div class="progress-container"><div class="progress-bar" style="width: ${percent}%;"></div></div>
-                        <details>
-                            <summary style="font-size:12px; color:#888;">查看明細</summary>
-                            ${data.orders.map(o => `
-                                <div style="font-size:13px; padding:5px 0; border-bottom:1px solid #EEE; display:flex; justify-content:space-between;">
-                                    <span>${o.tel} (x${o.qty})</span>
-                                    <span>${o.bought?'✅':'⏳'}</span>
-                                </div>
-                            `).join('')}
-                        </details>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // --- 統計頁面 ---
-        function renderStats() {
-            const monthSelect = document.getElementById('stat-month');
-            const months = [...new Set(rawData.map(r => r.date.substring(0, 7)))].sort().reverse();
-            
-            if(monthSelect.options.length === 0) {
-                months.forEach(m => monthSelect.add(new Option(m, m)));
-            }
-            
-            const sel = monthSelect.value;
-            const filtered = rawData.filter(r => r.date.startsWith(sel));
-            
-            let rev = 0, cost = 0, count = new Set(filtered.map(r => r.id)).size;
-            filtered.forEach(r => {
-                rev += (r.price * r.qty);
-                cost += (r.cost * r.qty);
-            });
-
-            document.getElementById('s-count').innerText = count;
-            document.getElementById('s-rev').innerText = `$${rev}`;
-            document.getElementById('s-cost').innerText = `$${cost}`;
-            document.getElementById('s-profit').innerText = `$${rev - cost}`;
-            
-            // 月份商品利潤列表
-            const itemStats = {};
-            filtered.forEach(r => {
-                if(!itemStats[r.name]) itemStats[r.name] = { rev:0, cost:0 };
-                itemStats[r.name].rev += (r.price * r.qty);
-                itemStats[r.name].cost += (r.cost * r.qty);
-            });
-            
-            document.getElementById('stat-items').innerHTML = Object.entries(itemStats).map(([n, d]) => `
-                <div class="card" style="display:flex; justify-content:space-between;">
-                    <span>${n}</span>
-                    <b>利潤: $${d.rev - d.cost}</b>
-                </div>
-            `).join('');
-        }
-
-        // --- 核心功能函數 ---
-        async function updateOrder(id, field, val) {
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_FIELD', orderId: id, field, val }) });
-            await sync();
-            openDetail(id);
-        }
-
-        async function updateSingle(rowIdx, field, val) {
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_FIELD', rowIdx, field, val }) });
-            await sync();
+        async function editItemDetail(rowIdx, oldName, oldQty, oldPrice) {
+            const newName = prompt("更改商品名稱", oldName);
+            if(!newName) return;
+            const newQty = prompt("更改數量", oldQty);
+            const newPrice = prompt("更改價錢", oldPrice);
+            await updateItemField(rowIdx, 'name', newName);
+            await updateItemField(rowIdx, 'qty', newQty);
+            await updateItemField(rowIdx, 'price', newPrice);
             const id = rawData.find(r => r.rowIdx === rowIdx).id;
             openDetail(id);
         }
 
-        async function saveConfig() {
-            const data = {
-                type: 'SAVE_CONFIG',
-                serial: document.getElementById('cfg-serial').value,
-                payme: document.getElementById('cfg-payme').value,
-                fpsId: document.getElementById('cfg-fps-id').value,
-                fpsName: document.getElementById('cfg-fps-name').value,
-                terms: document.getElementById('cfg-terms').value
-            };
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
-            alert("設定已儲存");
-            sync();
+        function renderBuy() {
+            const summary = {};
+            let pendingTotal = 0;
+            rawData.forEach(r => {
+                if(!summary[r.name]) summary[r.name] = { total: 0, bought: 0, orders: [] };
+                summary[r.name].total += r.qty;
+                if(r.bought) summary[r.name].bought += r.qty;
+                else pendingTotal += r.qty;
+                summary[r.name].orders.push(r);
+            });
+            document.getElementById('buy-pending-count').innerText = pendingTotal;
+            document.getElementById('buy-list').innerHTML = Object.entries(summary).map(([name, data]) => `
+                <div class="card">
+                    <b>${name}</b>
+                    <div style="font-size:12px; color:#888; margin:4px 0;">總需：${data.total} | 已買：${data.bought} | 待買：${data.total - data.bought}</div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${(data.bought/data.total)*100}%"></div></div>
+                    <details>
+                        <summary style="font-size:12px; color:var(--primary);">查看訂單</summary>
+                        ${data.orders.map(o => `
+                            <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-top:1px solid #EEE;">
+                                <span>${o.tel} (x${o.qty})</span>
+                                <button onclick="updateItemField(${o.rowIdx}, 'bought', '${o.bought?'❌未買':'✅已買'}')" style="border:none; background:none; color:${o.bought?'var(--green)':'#CCC'}">
+                                    ${o.bought?'✅ 已買':'❌ 未買'}
+                                </button>
+                            </div>
+                        `).join('')}
+                    </details>
+                </div>
+            `).join('');
         }
 
-        async function importBatch() {
-            const text = document.getElementById('batch-input').value;
-            const lines = text.split('\n');
-            let tempSerial = parseInt(config.serial);
-            const orders = {};
+        function renderStats() {
+            const monthSelect = document.getElementById('stat-month');
+            const months = [...new Set(rawData.map(r => r.date.substring(0, 7)))].sort().reverse();
+            if(monthSelect.options.length === 0) months.forEach(m => monthSelect.add(new Option(m, m)));
+            const sel = monthSelect.value;
+            const filtered = rawData.filter(r => r.date.startsWith(sel));
             
-            lines.forEach(line => {
-                const p = line.trim().split(/\s+/);
-                if(p.length < 2) return;
-                const tel = p[0], itemRaw = p[1], price = p[2] || 0;
-                if(!orders[tel]) orders[tel] = { id: getOrderNum(tempSerial++), tel, date: new Date().toISOString().split('T')[0], items: [], rem: "" };
-                const [n, q] = itemRaw.split('x');
-                orders[tel].items.push({ name: n, qty: parseInt(q||1), price: parseFloat(price) });
+            let paidCount = new Set(filtered.filter(r => r.paid).map(r => r.id)).size;
+            let totalCount = new Set(filtered.map(r => r.id)).size;
+            let paidRev = 0, totalRev = 0, cost = 0;
+            
+            filtered.forEach(r => {
+                totalRev += (r.price * r.qty);
+                cost += (r.cost * r.qty);
+                if(r.paid) paidRev += (r.price * r.qty);
             });
 
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'SAVE_BATCH', orders: Object.values(orders), nextSerial: tempSerial }) });
-            document.getElementById('batch-input').value = "";
-            sync();
-            alert("匯入成功");
+            document.getElementById('s-count').innerText = `${paidCount}/${totalCount}`;
+            document.getElementById('s-rev').innerText = `$${paidRev}/$${totalRev}`;
+            document.getElementById('s-cost').innerText = `$${cost}`;
+            document.getElementById('s-profit').innerText = `$${paidRev - cost}`;
+
+            const items = {};
+            filtered.forEach(r => {
+                if(!items[r.name]) items[r.name] = { cost: r.cost, rowIdx: r.rowIdx };
+            });
+            document.getElementById('stat-items').innerHTML = `<h3>商品成本設定</h3>` + Object.entries(items).map(([n, d]) => `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>${n}</span>
+                    <input type="number" value="${d.cost}" style="width:80px; margin:0;" onchange="updateItemField(${d.rowIdx}, 'cost', this.value)">
+                </div>
+            `).join('');
         }
 
-        function copyNotify(id) {
-            const its = rawData.filter(r => r.id === id);
-            const o = its[0];
-            const total = its.reduce((s, i) => s + (i.price * i.qty), 0);
-            const msg = `【SlowOver 訂單通知】\n\n單號：${o.id}\n項目：\n${its.map(i => `- ${i.name} x${i.qty}`).join('\n')}\n總金額：HKD $${total}\n\n💰 付款資料：\nPayMe: ${config.payme}\nFPS ID: ${config.fpsId} (${config.fpsName})\n\n⚠️ 注意事項：\n${config.terms}`;
-            navigator.clipboard.writeText(msg).then(() => alert("已複製通知文案"));
+        async function updateOrderField(id, field, val) {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_FIELD', orderId: id, field, val }) });
+            await sync(); openDetail(id);
         }
-
-        function addNewItemRow() {
-            const div = document.createElement('div');
-            div.className = 'card'; div.style.background = "#F9F9F9";
-            div.innerHTML = `<input type="text" class="ni-n" placeholder="商品名稱"><div style="display:flex; gap:5px;"><input type="number" class="ni-q" value="1" placeholder="數量"><input type="number" class="ni-p" placeholder="售價"></div>`;
-            document.getElementById('new-items').appendChild(div);
+        async function updateItemField(rowIdx, field, val) {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_FIELD', rowIdx, field, val }) });
+            await sync();
         }
-
-        async function saveNewOrder() {
-            const tel = document.getElementById('new-tel').value;
-            const its = Array.from(document.querySelectorAll('#new-items .card')).map(c => ({
-                name: c.querySelector('.ni-n').value,
-                qty: parseInt(c.querySelector('.ni-q').value),
-                price: parseFloat(c.querySelector('.ni-p').value)
-            }));
-            if(!tel || its.length === 0) return alert("資料不全");
-            const newOrder = { id: getOrderNum(config.serial), tel, date: new Date().toISOString().split('T')[0], items: its, rem: "" };
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'SAVE_BATCH', orders: [newOrder], nextSerial: parseInt(config.serial)+1 }) });
-            document.getElementById('new-tel').value = ""; document.getElementById('new-items').innerHTML = "";
-            sync();
-            alert("登記成功");
-        }
-
+        function closeDetail() { document.getElementById('detail-overlay').style.display = 'none'; }
         function switchPage(p, el) {
             document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
-            document.getElementById('page-'+p).classList.add('active');
-            el.classList.add('active');
+            document.getElementById('page-'+p).classList.add('active'); el.classList.add('active');
         }
-        function setFilter(f, el) {
-            currentFilter = f;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
-            renderOrders();
+        function addNewItemRow() {
+            const div = document.createElement('div');
+            div.className = 'card'; div.style.background = "#F9F9F9";
+            div.innerHTML = `<input type="text" class="ni-n" placeholder="品名"><div style="display:flex; gap:5px;"><input type="number" class="ni-q" value="1"><input type="number" class="ni-p" placeholder="售價"></div>`;
+            document.getElementById('new-items').appendChild(div);
         }
-        function closeDetail() { document.getElementById('detail-overlay').style.display = 'none'; }
-
         window.onload = () => { sync(); addNewItemRow(); };
     </script>
 </body>
