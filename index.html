@@ -3,107 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>SlowOver CRM V150</title>
+    <title>SlowOver CRM V160</title>
     <style>
-        :root { 
-            --bg: #F9FAFC; --card: #FFFFFF; --primary: #2B5CE7; --success: #34C759; 
-            --warning: #FF9500; --danger: #FF3B30; --text-main: #1C1C1E; --text-sub: #8E8E93;
-            --border: #F2F2F7;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { background: var(--bg); margin: 0; padding-bottom: calc(85px + env(safe-area-inset-bottom)); color: var(--text-main); }
+        :root { --bg: #F9FAFC; --primary: #2B5CE7; --success: #34C759; --warning: #FF9500; --danger: #FF3B30; --text-sub: #8E8E93; --border: #F2F2F7; }
+        * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
+        body { background: var(--bg); margin: 0; padding-bottom: 90px; color: #1C1C1E; }
+        
+        .page { display: none; padding: 20px; }
+        .page.active { display: block; }
+        header { padding: calc(40px + env(safe-area-inset-top)) 0 15px; }
+        header h1 { font-size: 26px; margin: 0; font-weight: 800; }
+
+        .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        
+        /* 狀態標籤 */
+        .tag-group { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+        .tag { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; border: 1px solid #EEE; }
+        .t-paid { color: var(--success); border-color: var(--success); }
+        .t-unpaid { color: var(--warning); border-color: var(--warning); }
+        
+        /* 進度條 (Buying Page) */
+        .progress-container { background: #EEE; border-radius: 10px; height: 8px; margin: 10px 0; overflow: hidden; }
+        .progress-bar { background: var(--primary); height: 100%; transition: 0.3s; }
 
         /* 導航欄 */
-        .nav-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 0.5px solid #DDD; display: flex; padding-bottom: env(safe-area-inset-bottom); height: 75px; z-index: 1000; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sub); font-size: 10px; font-weight: 700; transition: 0.2s; }
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; border-top: 0.5px solid #DDD; display: flex; padding-bottom: env(safe-area-inset-bottom); height: 75px; z-index: 1000; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sub); font-size: 10px; font-weight: 700; }
         .nav-item.active { color: var(--primary); }
         .nav-item span { font-size: 22px; margin-bottom: 4px; }
 
-        /* 頁面容器 */
-        .page { display: none; }
-        .page.active { display: block; }
-        header { padding: calc(45px + env(safe-area-inset-top)) 20px 15px; background: var(--bg); position: sticky; top:0; z-index: 100; }
-        header h1 { font-size: 26px; margin: 0; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
-
-        /* 卡片設計 */
-        .card { background: var(--card); border-radius: 14px; padding: 16px; margin: 0 20px 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid var(--border); position: relative; }
-        .tag { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; border: 1px solid #EEE; }
-        .tag-unpaid { color: var(--warning); border-color: var(--warning); background: #FFF9F2; }
-        .tag-paid { color: var(--success); border-color: var(--success); background: #F2FBF4; }
-
-        /* 按鈕樣式 */
-        .btn-action { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; cursor: pointer; }
-        .btn-blue { background: var(--primary); color: white; }
-        .btn-light { background: #EBF2FF; color: var(--primary); }
-
-        /* 浮動按鈕 */
-        .fab { position: fixed; bottom: 100px; right: 20px; width: 58px; height: 58px; background: var(--primary); color: white; border-radius: 29px; display: flex; align-items: center; justify-content: center; font-size: 30px; border: none; box-shadow: 0 4px 15px rgba(43,92,231,0.3); z-index: 500; }
-
-        /* 全屏詳情層 */
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; overflow-y: auto; padding-bottom: 100px; }
-        .overlay-header { padding: calc(45px + env(safe-area-inset-top)) 20px 15px; display: flex; align-items: center; justify-content: space-between; background: white; border-bottom: 0.5px solid #EEE; position: sticky; top:0; }
-
-        /* 統計網格 */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px; }
-        .stat-card { background: white; padding: 15px; border-radius: 14px; border: 1px solid var(--border); }
-        .stat-label { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 600; }
-        .stat-val { font-size: 20px; font-weight: 800; }
+        input, textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); margin-top: 8px; font-size: 15px; }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; margin-top: 10px; }
+        .btn-p { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
 
     <div id="page-order" class="page active">
-        <header><h1>訂單管理 <span style="font-size:18px;">🔍</span></h1></header>
+        <header><h1>訂單管理</h1></header>
         <div id="order-list"></div>
-        <button class="fab" onclick="nav('customer')">+</button>
     </div>
 
     <div id="page-customer" class="page">
-        <header><h1>客戶資訊 / 導入</h1></header>
+        <header><h1>新增訂單</h1></header>
         <div class="card">
-            <h3 style="margin-top:0; font-size:16px;">批量輸入訂單</h3>
-            <p style="font-size:12px; color:var(--text-sub); line-height:1.5;">格式：電話 商品 數量 售價 (每行一筆)<br>例：60001111 韓國噴噴 2 150</p>
-            <textarea id="batch-input" style="width:100%; height:180px; border:1px solid var(--border); border-radius:10px; padding:12px; font-size:14px; background:#F9F9F9; outline:none;" placeholder="在此貼上內容..."></textarea>
-            <button class="btn-action btn-blue" style="margin-top:15px;" onclick="doBatch()">確認並產生單號</button>
+            <label>電話號碼</label><input type="tel" id="input-tel" placeholder="輸入電話">
+            <label style="display:block; margin-top:15px;">商品內容 (格式：品名 數量 售價)</label>
+            <textarea id="input-items" rows="5" placeholder="例如：&#10;Miffy Keyring 1 150&#10;NB Breeze 1 1199"></textarea>
+            <button class="btn btn-p" onclick="createNewOrder()">確認提交</button>
         </div>
-        <div id="customer-list"></div>
     </div>
 
     <div id="page-buy" class="page">
-        <header><h1>採購清單</h1></header>
+        <header><h1>採購進度</h1></header>
         <div id="buy-list"></div>
     </div>
 
     <div id="page-stats" class="page">
-        <header><h1>營運統計</h1></header>
-        <div id="stat-grid" class="stat-grid"></div>
+        <header><h1>營運數據</h1></header>
+        <div id="stat-summary" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"></div>
+        <h3>成本輸入</h3>
+        <div id="cost-input-list"></div>
     </div>
 
     <div id="page-remind" class="page">
-        <header><h1>提醒事項</h1></header>
-        <div class="card" style="text-align:center; padding:40px 20px; color:var(--text-sub);">
-            <div style="font-size:40px; margin-bottom:10px;">🔔</div>
-            目前沒有待處理的到貨或付款提醒
-        </div>
+        <header><h1>24h 催付提醒</h1></header>
+        <div id="remind-list"></div>
     </div>
 
     <div id="page-settings" class="page">
-        <header><h1>設定</h1></header>
-        <div id="settings-content"></div>
-    </div>
-
-    <div id="detail-overlay" class="overlay">
-        <div class="overlay-header">
-            <button onclick="closeOverlay()" style="border:none; background:none; color:var(--primary); font-weight:800; font-size:16px;">〈 返回</button>
-            <div id="dt-id" style="font-weight:800; font-size:17px;">詳情</div>
-            <div style="font-size:18px;">✏️</div>
+        <header><h1>系統設定</h1></header>
+        <div id="settings-info"></div>
+        <div class="card">
+            <label>手動更新下次單號</label>
+            <input type="number" id="manual-serial">
+            <button class="btn btn-p" onclick="updateSerial()">更新單號</button>
         </div>
-        <div id="dt-body" style="padding:20px;"></div>
     </div>
 
     <nav class="nav-bar">
         <div class="nav-item active" onclick="nav('order', this)"><span>🏠</span>訂單</div>
-        <div class="nav-item" onclick="nav('customer', this)"><span>👤</span>客戶</div>
+        <div class="nav-item" onclick="nav('customer', this)"><span>➕</span>新增</div>
         <div class="nav-item" onclick="nav('buy', this)"><span>🛒</span>採購</div>
         <div class="nav-item" onclick="nav('stats', this)"><span>📊</span>統計</div>
         <div class="nav-item" onclick="nav('remind', this)"><span>🔔</span>提醒</div>
@@ -111,173 +91,180 @@
     </nav>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyxqLpZAXpxEMeAXQAMeJwM0fm2eOfVr5cvA-bdN8CGDG_vHPY40hWMa-YxbTfWrXeOag/exec"; // <--- 部署後填入這裡
-        let rawData = [];
-        let config = { company: "SLOWOVER", serial: 400, fpsId: "105249023", fpsName: "slow over" };
+        const API = "https://script.google.com/macros/s/AKfycbyxqLpZAXpxEMeAXQAMeJwM0fm2eOfVr5cvA-bdN8CGDG_vHPY40hWMa-YxbTfWrXeOag/exec";
+        let rawData = [], config = {};
 
-        // --- 導航切換 ---
-        function nav(p, el) {
-            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
-            document.getElementById('page-' + p).classList.add('active');
-            
-            if (el) el.classList.add('active');
-            else {
-                const navItems = document.querySelectorAll('.nav-item');
-                const idxMap = { order:0, customer:1, buy:2, stats:3, remind:4, settings:5 };
-                if (navItems[idxMap[p]]) navItems[idxMap[p]].classList.add('active');
-            }
-
-            if (p === 'stats') renderStats();
-            if (p === 'buy') renderBuyList();
-            if (p === 'settings') renderSettings();
-        }
-
-        // --- 同步數據 ---
         async function sync() {
-            try {
-                const res = await fetch(`${API_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                rawData = data.orders || [];
-                config = data;
-                renderOrders();
-            } catch (e) {
-                console.error("同步失敗", e);
-                // 離線預覽數據 (供妳測試 UI)
-                rawData = [
-                    { id: "WS26APR401", tel: "60001111", name: "NB Breeze 2203", qty: 1, price: 1199, paid: false, bought: false },
-                    { id: "WS26APR401", tel: "60001111", name: "Miffy Keyring", qty: 1, price: 150, paid: false, bought: false }
-                ];
-                renderOrders();
-            }
+            const res = await fetch(`${API}?t=${Date.now()}`);
+            config = await res.json();
+            rawData = config.orders;
+            renderAll();
         }
 
-        // --- 1. 訂單渲染 ---
+        function renderAll() {
+            renderOrders();
+            renderBuyPage();
+            renderStatsPage();
+            renderReminders();
+            renderSettingsPage();
+        }
+
+        // 1. 訂單頁面 (顯示電話與各類狀態)
         function renderOrders() {
-            const grouped = rawData.reduce((acc, o) => {
-                acc[o.id] = acc[o.id] || { ...o, items: [] };
-                acc[o.id].items.push(o);
-                return acc;
-            }, {});
-            const sorted = Object.values(grouped).reverse();
-            document.getElementById('order-list').innerHTML = sorted.map(o => {
-                const total = o.items.reduce((s, i) => s + (i.price * i.qty), 0);
+            const grouped = groupById(rawData);
+            document.getElementById('order-list').innerHTML = grouped.map(o => `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; font-weight:800;">
+                        <span>${o.id}</span>
+                        <span style="color:var(--primary);">HK$${o.total}</span>
+                    </div>
+                    <div style="font-size:13px; margin:5px 0;">📞 ${o.tel}</div>
+                    <div style="font-size:12px; color:#666;">${o.items.map(i => i.name).join(' / ')}</div>
+                    <div class="tag-group">
+                        <span class="tag ${o.paid?'t-paid':'t-unpaid'}">${o.paid?'已付':'未付'}</span>
+                        <span class="tag">${o.allBought?'全買':'欠貨'}</span>
+                        <span class="tag">${o.allArrived?'全到':'未齊'}</span>
+                        <span class="tag">${o.allShipped?'已出貨':'未發貨'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 2. 新增訂單邏輯
+        async function createNewOrder() {
+            const tel = document.getElementById('input-tel').value;
+            const itemsRaw = document.getElementById('input-items').value.split('\n');
+            const items = [];
+            itemsRaw.forEach(line => {
+                const p = line.trim().split(/\s+/);
+                if(p.length >= 3) items.push({ name: p[0], qty: parseInt(p[1]), price: parseFloat(p[2]) });
+            });
+            
+            const newId = `WS26APR${String(config.serial).padStart(3, '0')}`;
+            const payload = { type: 'SAVE_BATCH', orders: [{ id: newId, tel, items }], nextSerial: config.serial + 1 };
+            
+            await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
+            alert("訂單已建立：" + newId);
+            location.reload();
+        }
+
+        // 3. 採購頁面 (進度條)
+        function renderBuyPage() {
+            const products = {};
+            rawData.forEach(o => {
+                products[o.name] = products[o.name] || { total: 0, bought: 0 };
+                products[o.name].total += o.qty;
+                if(o.bought) products[o.name].bought += o.qty;
+            });
+
+            document.getElementById('buy-list').innerHTML = Object.keys(products).map(name => {
+                const p = products[name];
+                const percent = (p.bought / p.total * 100) || 0;
                 return `
-                    <div class="card" onclick="openDetail('${o.id}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-weight:800; font-size:16px;">${o.id}</span>
-                            <span class="tag ${o.paid ? 'tag-paid' : 'tag-unpaid'}">${o.paid ? '✅ 已付' : '⏳ 待付'}</span>
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                            <span>${name}</span>
+                            <span>${p.bought} / ${p.total}</span>
                         </div>
-                        <div style="font-size:13px; color:var(--text-sub);">${o.items.map(i => i.name).join('、')}</div>
-                        <div style="margin-top:12px; font-weight:800; color:var(--primary); font-size:17px;">HK$${total}</div>
+                        <div class="progress-container"><div class="progress-bar" style="width:${percent}%"></div></div>
+                        <div style="font-size:11px; color:var(--text-sub);">剩餘需買: ${p.total - p.bought}</div>
                     </div>
                 `;
             }).join('');
         }
 
-        // --- 2. 批量導入 ---
-        async function doBatch() {
-            const val = document.getElementById('batch-input').value.trim();
-            if (!val) return alert("請輸入內容");
-            const lines = val.split('\n');
-            const newOrders = [];
-            let s = config.serial;
-            lines.forEach(l => {
-                const p = l.split(/\s+/);
-                if (p.length >= 4) {
-                    newOrders.push({
-                        id: `WS26APR${String(s).padStart(3,'0')}`, tel: p[0], date: new Date().toLocaleDateString(),
-                        items: [{ name: p[1], qty: parseInt(p[2]), price: parseFloat(p[3]) }]
-                    });
-                    s++;
-                }
+        // 4. 統計頁面 (利潤分析)
+        function renderStatsPage() {
+            const totalRev = rawData.reduce((s,o)=>s+(o.price*o.qty), 0);
+            const totalCost = rawData.reduce((s,o)=>s+(o.cost*o.qty), 0);
+            const profit = totalRev - totalCost;
+            const profitPercent = (profit / totalRev * 100).toFixed(1);
+
+            document.getElementById('stat-summary').innerHTML = `
+                <div class="card" style="margin:0;"><div style="font-size:11px;">總銷售額</div><div style="font-size:18px; font-weight:800;">HK$${totalRev}</div></div>
+                <div class="card" style="margin:0;"><div style="font-size:11px;">利潤 (${profitPercent}%)</div><div style="font-size:18px; font-weight:800; color:var(--success);">HK$${profit}</div></div>
+            `;
+
+            // 成本輸入列表
+            const prodList = {};
+            rawData.forEach(o => {
+                prodList[o.name] = prodList[o.name] || { totalQty: 0, cost: o.cost };
+                prodList[o.name].totalQty += o.qty;
             });
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ type: 'SAVE_BATCH', orders: newOrders }) });
-            alert(`成功導入 ${newOrders.length} 筆訂單！`);
-            document.getElementById('batch-input').value = "";
-            sync(); nav('order');
+
+            document.getElementById('cost-input-list').innerHTML = Object.keys(prodList).map(name => {
+                const p = prodList[name];
+                return `
+                    <div class="card">
+                        <div style="font-weight:bold;">${name} (總量: ${p.totalQty})</div>
+                        <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                            <input type="number" id="cost-${name}" value="${p.cost}" style="margin:0; flex:1;" placeholder="輸入成本">
+                            <button onclick="updateCost('${name}')" style="background:var(--success); color:white; border:none; padding:10px; border-radius:8px;">儲存</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // --- 3. 採購清單分組 ---
-        function renderBuyList() {
-            const map = rawData.reduce((acc, o) => {
-                if (o.bought) return acc;
-                acc[o.name] = acc[o.name] || { name: o.name, qty: 0, ids: [] };
-                acc[o.name].qty += o.qty;
-                acc[o.name].ids.push(o.id);
+        async function updateCost(name) {
+            const cost = document.getElementById(`cost-${name}`).value;
+            await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_COST', productName: name, cost: parseFloat(cost) }) });
+            alert("成本已更新");
+            sync();
+        }
+
+        // 5. 提醒頁面 (24小時催付)
+        function renderReminders() {
+            const now = Date.now();
+            const unpaid = groupById(rawData).filter(o => !o.paid && (now - o.timestamp > 24 * 60 * 60 * 1000));
+            
+            document.getElementById('remind-list').innerHTML = unpaid.map(o => `
+                <div class="card" style="border-left:5px solid var(--danger);">
+                    <div style="font-weight:bold;">${o.id} - 逾期未付</div>
+                    <div style="font-size:13px; color:#666;">電話: ${o.tel} | 金額: HK$${o.total}</div>
+                    <button class="btn btn-light" style="padding:8px; font-size:12px;" onclick="copyReminder('${o.id}', ${o.total})">複製催付文案</button>
+                </div>
+            `).join('') || '<p style="text-align:center; color:gray;">目前沒有逾期訂單</p>';
+        }
+
+        // 6. 設定頁面
+        function renderSettingsPage() {
+            const grouped = groupById(rawData);
+            const paidCount = grouped.filter(o => o.paid).length;
+            document.getElementById('settings-info').innerHTML = `
+                <div class="card">
+                    <div>總訂單數: ${grouped.length}</div>
+                    <div style="color:var(--success);">已付款: ${paidCount}</div>
+                    <div style="color:var(--danger);">未付款: ${grouped.length - paidCount}</div>
+                    <hr>
+                    <div style="font-size:13px; color:var(--text-sub);">當前單號: ${config.serial}</div>
+                </div>
+            `;
+            document.getElementById('manual-serial').value = config.serial;
+        }
+
+        function groupById(data) {
+            const g = data.reduce((acc, o) => {
+                acc[o.id] = acc[o.id] || { ...o, items: [], total: 0 };
+                acc[o.id].items.push(o);
+                acc[o.id].total += (o.price * o.qty);
                 return acc;
             }, {});
-            document.getElementById('buy-list').innerHTML = Object.values(map).map(p => `
-                <div class="card">
-                    <div style="display:flex; justify-content:space-between;">
-                        <b style="font-size:15px;">${p.name}</b>
-                        <span style="color:var(--primary); font-weight:800;">x ${p.qty}</span>
-                    </div>
-                    <div style="font-size:11px; color:var(--text-sub); margin-top:8px;">來源單號：${[...new Set(p.ids)].join(', ')}</div>
-                </div>
-            `).join('');
+            return Object.values(g).map(o => ({
+                ...o,
+                allBought: o.items.every(i => i.bought),
+                allArrived: o.items.every(i => i.arrived),
+                allShipped: o.items.every(i => i.shipped)
+            }));
         }
 
-        // --- 4. 統計頁面 ---
-        function renderStats() {
-            const rev = rawData.reduce((s,o) => s+(o.price*o.qty), 0);
-            const paid = rawData.filter(o=>o.paid).reduce((s,o)=>s+(o.price*o.qty), 0);
-            const count = [...new Set(rawData.map(o=>o.id))].length;
-            const toBuy = rawData.filter(o=>!o.bought).length;
-            document.getElementById('stat-grid').innerHTML = `
-                <div class="stat-card"><div class="stat-label">總營業額</div><div class="stat-val">HK$${rev}</div></div>
-                <div class="stat-card"><div class="stat-label">已收金額</div><div class="stat-val" style="color:var(--success);">HK$${paid}</div></div>
-                <div class="stat-card"><div class="stat-label">訂單量</div><div class="stat-val">${count}</div></div>
-                <div class="stat-card"><div class="stat-label">待採購項</div><div class="stat-val" style="color:var(--warning);">${toBuy}</div></div>
-            `;
+        function nav(p, el) {
+            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            el.classList.add('active');
         }
 
-        // --- 詳情與複製功能 ---
-        function openDetail(id) {
-            const items = rawData.filter(o => o.id === id);
-            const o = items[0];
-            const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
-            document.getElementById('dt-id').innerText = id;
-            document.getElementById('dt-body').innerHTML = `
-                <button class="btn-action btn-blue" onclick="copyRecon('${id}', '${o.tel}', ${total})">📋 複製對賬文案</button>
-                <button class="btn-action btn-light" onclick="copyNotify('${id}')">💬 複製訂單通知</button>
-                <div class="card" style="margin:20px 0; border-left:4px solid ${o.paid ? '#34C759' : '#FF9500'}">
-                    <div style="font-size:12px; color:var(--text-sub);">付款狀態</div>
-                    <div style="font-size:18px; font-weight:800;">${o.paid ? '✅ 已確認付款' : '⏳ 尚未付款'}</div>
-                </div>
-                <h3>商品明細</h3>
-                ${items.map(it => `
-                    <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #EEE;">
-                        <div><b>${it.name}</b><br><small style="color:#888;">HK$${it.price} x ${it.qty}</small></div>
-                        <div style="font-weight:800;">HK$${it.price * it.qty}</div>
-                    </div>
-                `).join('')}
-                <div style="text-align:right; margin-top:20px; font-size:20px; font-weight:800; color:var(--primary);">總計 HK$${total}</div>
-            `;
-            document.getElementById('detail-overlay').style.display = 'block';
-        }
-
-        function copyRecon(id, tel, total) {
-            const text = `【SlowOver 對賬通知】\n單號：${id}\n電話：${tel}\n金額：HK$${total}\n付款：FPS ${config.fpsId}\n付款後請截圖通知，謝謝！`;
-            navigator.clipboard.writeText(text).then(() => alert("對賬文案已複製"));
-        }
-
-        function copyNotify(id) {
-            const text = `【SlowOver 訂單通知】\n單號 ${id} 已成功建立！我們將在採購完成後通知您。`;
-            navigator.clipboard.writeText(text).then(() => alert("通知文案已複製"));
-        }
-
-        function renderSettings() {
-            document.getElementById('settings-content').innerHTML = `
-                <div class="card">
-                    <div class="stat-label">店名</div><div style="font-weight:800; margin-bottom:15px;">${config.company}</div>
-                    <div class="stat-label">FPS ID</div><div style="font-weight:800;">${config.fpsId} (${config.fpsName})</div>
-                </div>
-                <div class="card" style="background:#F2F2F7; border:none; text-align:center; font-size:12px; color:var(--text-sub);">SlowOver CRM Version 1.50</div>
-            `;
-        }
-
-        function closeOverlay() { document.getElementById('detail-overlay').style.display = 'none'; }
         window.onload = sync;
     </script>
 </body>
