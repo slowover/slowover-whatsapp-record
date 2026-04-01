@@ -3,268 +3,374 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SlowOver CRM V110</title>
+    <title>SlowOver CRM V111</title>
     <style>
-        :root { 
-            --bg: #F4F1EE; --card: #FFFFFF; --text: #4A3E31; 
-            --primary: #D4A373; --accent: #A64444; --green: #588157;
-            --tag-unpaid: #E9E4DE; --tag-paid: #D4A373; --tag-arrived: #588157; --tag-shipped: #3D5A80;
-        }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px 15px 100px 15px; }
-        .card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; border-left: 5px solid transparent; }
+        :root { --bg: #F8F5F2; --card: #FFF; --text: #5D4037; --primary: #D4A373; --accent: #A64444; --green: #6B8E23; --blue: #5D8AA8; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #FFF; display: flex; border-top: 1px solid #EEE; padding-bottom: env(safe-area-inset-bottom); z-index: 1000; }
+        .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 12px; color: #AAA; cursor: pointer; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
         
-        /* 狀態標籤樣式 */
-        .badge { font-size: 10px; padding: 2px 8px; border-radius: 5px; font-weight: bold; margin-right: 5px; }
-        .badge-unpaid { background: #EEE; color: #999; }
-        .badge-paid { background: var(--primary); color: white; }
-        .badge-arrived { background: var(--green); color: white; }
-        .badge-shipped { background: var(--tag-shipped); color: white; }
-
-        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #EEE; z-index: 1000; }
-        .nav-item { flex: 1; padding: 15px 0; text-align: center; font-size: 12px; color: #BBB; font-weight: bold; }
-        .nav-item.active { color: var(--primary); }
-        
-        .page { display: none; max-width: 600px; margin: 0 auto; }
+        .page { display: none; padding: 15px; max-width: 600px; margin: 0 auto; }
         .page.active { display: block; }
-
-        input, textarea, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #DDD; border-radius: 8px; box-sizing: border-box; }
-        button { padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-main { background: var(--primary); color: white; width: 100%; }
-        .btn-outline { background: white; border: 1px solid var(--primary); color: var(--primary); font-size: 12px; }
         
-        .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .item-row { background: #F9F9F9; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 14px; position: relative; }
-        .overdue { border: 2px solid var(--accent) !important; background: #FFF5F5; }
+        .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: var(--card); padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid var(--primary); }
+        .stat-box h4 { margin: 0; font-size: 12px; color: #888; }
+        .stat-box p { margin: 5px 0 0 0; font-size: 18px; font-weight: bold; }
+
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .filter-btn { padding: 6px 15px; background: #EEE; border-radius: 20px; font-size: 13px; white-space: nowrap; border: none; }
+        .filter-btn.active { background: var(--primary); color: white; }
+
+        .progress-container { background: #EEE; border-radius: 10px; height: 8px; margin: 10px 0; overflow: hidden; }
+        .progress-bar { background: var(--green); height: 100%; transition: width 0.3s; }
+        
+        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; margin-right: 4px; }
+        .bg-unpaid { background: #BBB; } .bg-paid { background: var(--primary); } .bg-arrived { background: var(--green); } .bg-shipped { background: var(--blue); }
+
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #DDD; border-radius: 8px; margin-top: 5px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .btn-p { background: var(--primary); color: white; }
+        .btn-s { background: #F5F5F5; color: var(--text); border: 1px solid #DDD; }
+
+        /* 詳情頁 Overlay */
+        #detail-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; overflow-y: auto; padding: 20px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-    <div id="sync-toast" style="position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.7); color:white; padding:5px 15px; border-radius:20px; display:none; z-index:2000;">同步中...</div>
+    <div id="page-stats" class="page active">
+        <select id="stat-month" onchange="renderStats()" style="margin-bottom: 15px;"></select>
+        <div class="stat-grid">
+            <div class="stat-box"><h4>訂單總數</h4><p id="s-count">0</p></div>
+            <div class="stat-box"><h4>總營業額</h4><p id="s-rev">$0</p></div>
+            <div class="stat-box"><h4>總成本</h4><p id="s-cost">$0</p></div>
+            <div class="stat-box"><h4>預計純利</h4><p id="s-profit">$0</p></div>
+        </div>
+        <div id="stat-items"></div>
+    </div>
 
-    <div id="page-order" class="page active">
-        <div class="card" style="background: #FFF9F2;">
-            <h3>🆕 批量匯入訂單</h3>
-            <textarea id="batch-input" placeholder="格式：電話 商品x數量 價格 (不同電話自動分單)" rows="3"></textarea>
-            <button class="btn-main" onclick="processBatchImport()">解析並匯入</button>
+    <div id="page-order" class="page">
+        <div class="card">
+            <h3>📝 登記新單</h3>
+            <input type="tel" id="new-tel" placeholder="客戶電話">
+            <div id="new-items"></div>
+            <button class="btn btn-s" onclick="addNewItemRow()">+ 增加商品</button>
+            <button class="btn btn-p" onclick="saveNewOrder()">儲存訂單</button>
         </div>
 
-        <div class="card" id="overdue-notice" style="display:none; border:2px solid var(--accent);">
-            <h4 style="color:var(--accent); margin:0;">⚠️ 催付提醒 (超過24H未付)</h4>
-            <div id="overdue-list" style="font-size:12px; margin:10px 0;"></div>
-            <button class="btn-outline" onclick="copyOverdueList()">複製催付清單</button>
+        <input type="text" id="search-order" placeholder="🔍 搜尋電話/單號/品名..." oninput="renderOrders()">
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
+            <button class="filter-btn" onclick="setFilter('unpaid', this)">未付款</button>
+            <button class="filter-btn" onclick="setFilter('unbought', this)">含未買</button>
+            <button class="filter-btn" onclick="setFilter('overdue', this)">⚠️ 逾期未付</button>
         </div>
-
-        <input type="text" id="search-order" placeholder="🔍 搜尋單號/電話/品名..." oninput="renderOrders()">
-        <div style="display:flex; gap:5px; margin-bottom:10px;">
-            <select id="filter-status" onchange="renderOrders()"><option value="all">所有狀態</option><option value="unpaid">未付款</option><option value="paid">已付待採</option><option value="arrived">已到貨</option></select>
-            <button class="btn-outline" onclick="syncFromCloud()">🔄 刷新</button>
-        </div>
-
         <div id="order-list"></div>
     </div>
 
     <div id="page-buy" class="page">
+        <div id="buy-list"></div>
+    </div>
+
+    <div id="page-settings" class="page">
         <div class="card">
-            <h3>🛍️ 採購清單</h3>
-            <div id="buy-summary"></div>
+            <h3>🔢 訂單編號設定</h3>
+            <p style="font-size: 12px; color: #888;">目前單號：<span id="current-id-preview"></span></p>
+            <input type="number" id="cfg-serial" placeholder="下一個起始編號 (例如 201)">
+            <button class="btn btn-s" onclick="saveConfig()">更新編號</button>
         </div>
         <div class="card">
-            <h3>⚙️ 批量操作</h3>
-            <button class="btn-outline" onclick="batchUpdate('paid', '✅已付')">標記所選為【已付】</button>
-            <button class="btn-outline" style="margin-top:5px" onclick="batchUpdate('bought', '✅已買')">標記所選為【已買】</button>
+            <h3>📥 批量匯入</h3>
+            <textarea id="batch-input" rows="4" placeholder="格式：電話 商品x數量 價格 (多行匯入)"></textarea>
+            <button class="btn btn-p" onclick="importBatch()">立即匯入</button>
+        </div>
+        <div class="card">
+            <h3>💳 付款及條款設定</h3>
+            <input type="text" id="cfg-payme" placeholder="PayMe 連結">
+            <input type="text" id="cfg-fps-id" placeholder="FPS ID">
+            <input type="text" id="cfg-fps-name" placeholder="FPS 名稱">
+            <textarea id="cfg-terms" rows="4" placeholder="注意事項及條款"></textarea>
+            <button class="btn btn-p" onclick="saveConfig()">儲存所有設定</button>
         </div>
     </div>
 
-    <div id="page-stats" class="page">
-        <div id="stats-overview"></div>
-        <div id="stat-list"></div>
+    <div id="detail-overlay">
+        <button class="btn btn-s" style="width: 80px;" onclick="closeDetail()">← 返回</button>
+        <div id="detail-content"></div>
     </div>
 
     <nav class="nav-bar">
-        <div class="nav-item active" onclick="switchPage('order', this)">📝 訂單</div>
+        <div class="nav-item" onclick="switchPage('order', this)">📝 訂單</div>
         <div class="nav-item" onclick="switchPage('buy', this)">🛍️ 採購</div>
-        <div class="nav-item" onclick="switchPage('stats', this)">📊 統計</div>
+        <div class="nav-item active" onclick="switchPage('stats', this)">📊 統計</div>
+        <div class="nav-item" onclick="switchPage('settings', this)">⚙️ 設定</div>
     </nav>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxPcskRvFZoka0kzvUo7zcj7qQOkwt2QGVIvdJf6R_-iQl9somIDcFtstCFJujAIP-o/exec";
-        let rawData = [], serial = 402;
+        let rawData = [], config = {}, currentFilter = 'all';
 
-        async function syncFromCloud() {
-            document.getElementById('sync-toast').style.display = 'block';
-            try {
-                const r = await fetch(GAS_URL + "?t=" + Date.now());
-                const res = await r.json();
-                rawData = res.orders || [];
-                serial = res.nextSerial;
-                renderOrders();
-                checkOverdue();
-            } finally { document.getElementById('sync-toast').style.display = 'none'; }
+        async function sync() {
+            const r = await fetch(GAS_URL + "?t=" + Date.now());
+            const res = await r.json();
+            rawData = res.orders;
+            config = res;
+            updateUI();
         }
 
-        // 核心排序：已付時間 > 未付時間
-        function renderOrders() {
-            const list = document.getElementById('order-list');
-            const q = document.getElementById('search-order').value.toLowerCase();
-            const filter = document.getElementById('filter-status').value;
+        function updateUI() {
+            renderStats();
+            renderOrders();
+            renderBuy();
+            document.getElementById('current-id-preview').innerText = getOrderNum(config.serial);
+            document.getElementById('cfg-serial').value = config.serial;
+            document.getElementById('cfg-payme').value = config.payme;
+            document.getElementById('cfg-fps-id').value = config.fpsId;
+            document.getElementById('cfg-fps-name').value = config.fpsName;
+            document.getElementById('cfg-terms').value = config.terms;
+        }
 
-            // 分組
+        function getOrderNum(s) {
+            const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+            return `WS26${months[new Date().getMonth()]}${String(s).padStart(3, '0')}`;
+        }
+
+        // --- 訂單分組與渲染 ---
+        function renderOrders() {
+            const container = document.getElementById('order-list');
+            const q = document.getElementById('search-order').value.toLowerCase();
+            const now = Date.now();
+
             const grouped = {};
             rawData.forEach(r => {
-                if(!grouped[r.id]) grouped[r.id] = { ...r, items: [] };
+                if(!grouped[r.id]) grouped[r.id] = { ...r, items: [], allBought: true };
                 grouped[r.id].items.push(r);
+                if(!r.bought) grouped[r.id].allBought = false;
             });
 
-            // 排序邏輯：有 PaidAt 的排前面，並按時間升序（先付先處理）
-            const sorted = Object.values(grouped).sort((a,b) => {
-                if(a.paid && b.paid) return a.paidAt - b.paidAt;
-                if(a.paid) return -1;
-                if(b.paid) return 1;
-                return b.rowIdx - a.rowIdx;
-            });
+            let list = Object.values(grouped).sort((a,b) => b.paidAt - a.paidAt || b.rowIdx - a.rowIdx);
 
-            list.innerHTML = sorted.filter(o => {
-                const matchQ = o.tel.includes(q) || o.id.includes(q) || o.items.some(i=>i.name.includes(q));
-                if(filter==='unpaid') return matchQ && !o.paid;
-                if(filter==='paid') return matchQ && o.paid && !o.arrived;
-                return matchQ;
-            }).map(o => `
-                <div class="card ${o.isOverdue ? 'overdue' : ''}">
-                    <div class="order-header">
-                        <div>
-                            <input type="checkbox" class="order-sel" value="${o.id}">
-                            <span class="badge ${o.paid?'badge-paid':'badge-unpaid'}">${o.paid?'已付':'未付'}</span>
-                            ${o.arrived?'<span class="badge badge-arrived">已到</span>':''}
-                            ${o.shipped?'<span class="badge badge-shipped">已出</span>':''}
-                            <small>#${o.id}</small>
-                        </div>
-                        <button class="btn-outline" onclick="deleteOrder('${o.id}')">🗑️</button>
+            if(currentFilter === 'unpaid') list = list.filter(o => !o.paid);
+            if(currentFilter === 'unbought') list = list.filter(o => !o.allBought);
+            if(currentFilter === 'overdue') list = list.filter(o => !o.paid && (now - new Date(o.date).getTime() > 86400000));
+            if(q) list = list.filter(o => o.tel.includes(q) || o.id.toLowerCase().includes(q) || o.items.some(i => i.name.toLowerCase().includes(q)));
+
+            container.innerHTML = list.map(o => `
+                <div class="card" onclick="openDetail('${o.id}')">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>📞 ${o.tel}</b>
+                        <span><span class="badge ${o.paid?'bg-paid':'bg-unpaid'}">${o.paid?'已付':'未付'}</span></span>
                     </div>
-                    <b onclick="editField('${o.id}', 'tel', '${o.tel}')">📞 ${o.tel}</b>
-                    <div style="font-size:12px; color:#888; margin:5px 0;">備註：<span onclick="editField('${o.id}', 'rem', '${o.rem}')">${o.rem || '點擊新增備註'}</span></div>
-                    
-                    ${o.items.map(it => `
-                        <div class="item-row">
-                            <div style="display:flex; justify-content:space-between;">
-                                <span onclick="editSingle('${it.rowIdx}', 'name', '${it.name}')">${it.name}</span>
-                                <b>x<span onclick="editSingle('${it.rowIdx}', 'qty', '${it.qty}')">${it.qty}</span></b>
-                            </div>
-                            <div style="font-size:12px; color:var(--primary); margin-top:5px;">
-                                $${it.price} | ${it.bought?'✅已買':'❌未買'}
-                                <button class="btn-outline" style="float:right; padding:2px 5px;" onclick="updateItemStatus(${it.rowIdx}, 'bought', '${it.bought?'❌未買':'✅已買'}')">切換購買</button>
-                            </div>
-                        </div>
-                    `).join('')}
-
-                    <div style="margin-top:10px; display:flex; gap:5px;">
-                        <button class="btn-outline" style="flex:1" onclick="updateOrderStatus('${o.id}', 'paid', '${o.paid?'⏳未付':'✅已付'}')">付款切換</button>
-                        <button class="btn-outline" style="flex:1" onclick="updateOrderStatus('${o.id}', 'arrived', '${o.arrived?'❌未到':'✅已到'}')">到貨切換</button>
-                        <button class="btn-outline" style="flex:1" onclick="updateOrderStatus('${o.id}', 'shipped', '${o.shipped?'❌未出':'✅已出'}')">出貨切換</button>
+                    <div style="font-size:12px; color:#888; margin-top:5px;">#${o.id} | ${o.items.length}件商品</div>
+                    <div style="margin-top:5px;">
+                        ${o.arrived?'<span class="badge bg-arrived">已到貨</span>':''}
+                        ${o.shipped?'<span class="badge bg-shipped">已出貨</span>':''}
                     </div>
                 </div>
             `).join('');
         }
 
-        // 催付檢查：超過24小時未付
-        function checkOverdue() {
-            const now = Date.now();
-            const overdue = rawData.filter(r => !r.paid && (now - new Date(r.date).getTime() > 86400000));
-            const div = document.getElementById('overdue-notice');
-            if(overdue.length > 0) {
-                div.style.display = 'block';
-                const ids = [...new Set(overdue.map(r => r.tel))];
-                document.getElementById('overdue-list').innerText = "需催付電話：" + ids.join(', ');
-                overdue.forEach(r => r.isOverdue = true);
-            } else {
-                div.style.display = 'none';
-            }
+        // --- 訂單詳情頁 ---
+        function openDetail(id) {
+            const its = rawData.filter(r => r.id === id);
+            const o = its[0];
+            const total = its.reduce((s, i) => s + (i.price * i.qty), 0);
+            
+            document.getElementById('detail-content').innerHTML = `
+                <h2 style="margin-bottom:5px;">訂單詳情</h2>
+                <p>單號：${o.id} | 日期：${new Date(o.date).toLocaleDateString()}</p>
+                <div class="card">
+                    <p>客戶電話：<b>${o.tel}</b></p>
+                    <button class="btn btn-p" onclick="updateOrder('${o.id}', 'paid', '${o.paid?'⏳未付':'✅已付'}')">切換付款：${o.paid?'✅已付':'⏳未付'}</button>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                        <button class="btn btn-s" onclick="updateOrder('${o.id}', 'arrived', '${o.arrived?'❌未到':'✅已到'}')">到貨：${o.arrived?'✅':'❌'}</button>
+                        <button class="btn btn-s" onclick="updateOrder('${o.id}', 'shipped', '${o.shipped?'❌未出':'✅已出'}')">出貨：${o.shipped?'✅':'❌'}</button>
+                    </div>
+                </div>
+                <h3>商品明細</h3>
+                ${its.map(it => `
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <b>${it.name}</b><br>
+                            <small>$${it.price} x ${it.qty}</small>
+                        </div>
+                        <button class="btn btn-s" style="width:auto; padding:5px 10px;" onclick="updateSingle(${it.rowIdx}, 'bought', '${it.bought?'❌未買':'✅已買'}')">
+                            ${it.bought?'✅已購':'❌未購'}
+                        </button>
+                    </div>
+                `).join('')}
+                <div style="text-align:right; font-size:20px; font-weight:bold; margin:20px 0;">合計：$${total}</div>
+                <button class="btn btn-p" onclick="copyNotify('${o.id}')">📋 複製訂單通知及條款</button>
+            `;
+            document.getElementById('detail-overlay').style.display = 'block';
         }
 
-        // 批量匯入解析邏輯
-        async function processBatchImport() {
-            const text = document.getElementById('batch-input').value;
-            if(!text) return;
-            const lines = text.split('\n');
-            const orders = {};
-            const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-            const dateStr = new Date().toISOString().split('T')[0];
-            const monthCode = months[new Date().getMonth()];
-
-            lines.forEach(line => {
-                const parts = line.trim().split(/\s+/);
-                if(parts.length < 2) return;
-                const tel = parts[0];
-                const itemRaw = parts[1]; // 格式: 品名x數量
-                const price = parts[2] || 0;
-                
-                if(!orders[tel]) {
-                    orders[tel] = { id: `WS26${monthCode}${serial++}`, tel, date: dateStr, items: [], rem: "" };
-                }
-                const [name, qty] = itemRaw.split('x');
-                orders[tel].items.push({ name, qty: parseInt(qty||1), price: parseFloat(price) });
+        // --- 採購頁面 (含進度條) ---
+        function renderBuy() {
+            const summary = {};
+            rawData.forEach(r => {
+                if(!summary[r.name]) summary[r.name] = { total: 0, bought: 0, orders: [] };
+                summary[r.name].total += r.qty;
+                if(r.bought) summary[r.name].bought += r.qty;
+                summary[r.name].orders.push(r);
             });
 
-            toggleSync(true);
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({type:'BATCH_IMPORT', orders: Object.values(orders), nextSerial: serial}) });
-            document.getElementById('batch-input').value = "";
-            syncFromCloud();
+            document.getElementById('buy-list').innerHTML = Object.entries(summary).map(([name, data]) => {
+                const percent = (data.bought / data.total) * 100;
+                return `
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between;"><b>📦 ${name}</b> <span>${data.bought}/${data.total}</span></div>
+                        <div class="progress-container"><div class="progress-bar" style="width: ${percent}%;"></div></div>
+                        <details>
+                            <summary style="font-size:12px; color:#888;">查看明細</summary>
+                            ${data.orders.map(o => `
+                                <div style="font-size:13px; padding:5px 0; border-bottom:1px solid #EEE; display:flex; justify-content:space-between;">
+                                    <span>${o.tel} (x${o.qty})</span>
+                                    <span>${o.bought?'✅':'⏳'}</span>
+                                </div>
+                            `).join('')}
+                        </details>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // 批量更新狀態
-        async function batchUpdate(field, val) {
-            const ids = Array.from(document.querySelectorAll('.order-sel:checked')).map(el => el.value);
-            if(ids.length === 0) return alert("請先勾選訂單");
-            toggleSync(true);
-            for(let id of ids) {
-                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({type:'UPDATE_FIELD', orderId: id, field, val}) });
+        // --- 統計頁面 ---
+        function renderStats() {
+            const monthSelect = document.getElementById('stat-month');
+            const months = [...new Set(rawData.map(r => r.date.substring(0, 7)))].sort().reverse();
+            
+            if(monthSelect.options.length === 0) {
+                months.forEach(m => monthSelect.add(new Option(m, m)));
             }
-            syncFromCloud();
+            
+            const sel = monthSelect.value;
+            const filtered = rawData.filter(r => r.date.startsWith(sel));
+            
+            let rev = 0, cost = 0, count = new Set(filtered.map(r => r.id)).size;
+            filtered.forEach(r => {
+                rev += (r.price * r.qty);
+                cost += (r.cost * r.qty);
+            });
+
+            document.getElementById('s-count').innerText = count;
+            document.getElementById('s-rev').innerText = `$${rev}`;
+            document.getElementById('s-cost').innerText = `$${cost}`;
+            document.getElementById('s-profit').innerText = `$${rev - cost}`;
+            
+            // 月份商品利潤列表
+            const itemStats = {};
+            filtered.forEach(r => {
+                if(!itemStats[r.name]) itemStats[r.name] = { rev:0, cost:0 };
+                itemStats[r.name].rev += (r.price * r.qty);
+                itemStats[r.name].cost += (r.cost * r.qty);
+            });
+            
+            document.getElementById('stat-items').innerHTML = Object.entries(itemStats).map(([n, d]) => `
+                <div class="card" style="display:flex; justify-content:space-between;">
+                    <span>${n}</span>
+                    <b>利潤: $${d.rev - d.cost}</b>
+                </div>
+            `).join('');
         }
 
-        async function updateOrderStatus(orderId, field, val) {
-            toggleSync(true);
-            await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({type:'UPDATE_FIELD', orderId, field, val}) });
-            syncFromCloud();
+        // --- 核心功能函數 ---
+        async function updateOrder(id, field, val) {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_FIELD', orderId: id, field, val }) });
+            await sync();
+            openDetail(id);
         }
 
-        async function updateItemStatus(rowIdx, field, val) {
-            toggleSync(true);
-            await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({type:'UPDATE_FIELD', rowIdx, field, val}) });
-            syncFromCloud();
+        async function updateSingle(rowIdx, field, val) {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'UPDATE_FIELD', rowIdx, field, val }) });
+            await sync();
+            const id = rawData.find(r => r.rowIdx === rowIdx).id;
+            openDetail(id);
         }
 
-        async function editSingle(rowIdx, field, old) {
-            const val = prompt(`更改 ${field}`, old);
-            if(val !== null) updateItemStatus(rowIdx, field, val);
+        async function saveConfig() {
+            const data = {
+                type: 'SAVE_CONFIG',
+                serial: document.getElementById('cfg-serial').value,
+                payme: document.getElementById('cfg-payme').value,
+                fpsId: document.getElementById('cfg-fps-id').value,
+                fpsName: document.getElementById('cfg-fps-name').value,
+                terms: document.getElementById('cfg-terms').value
+            };
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
+            alert("設定已儲存");
+            sync();
         }
 
-        async function editField(orderId, field, old) {
-            const val = prompt(`更改 ${field}`, old);
-            if(val !== null) updateOrderStatus(orderId, field, val);
+        async function importBatch() {
+            const text = document.getElementById('batch-input').value;
+            const lines = text.split('\n');
+            let tempSerial = parseInt(config.serial);
+            const orders = {};
+            
+            lines.forEach(line => {
+                const p = line.trim().split(/\s+/);
+                if(p.length < 2) return;
+                const tel = p[0], itemRaw = p[1], price = p[2] || 0;
+                if(!orders[tel]) orders[tel] = { id: getOrderNum(tempSerial++), tel, date: new Date().toISOString().split('T')[0], items: [], rem: "" };
+                const [n, q] = itemRaw.split('x');
+                orders[tel].items.push({ name: n, qty: parseInt(q||1), price: parseFloat(price) });
+            });
+
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'SAVE_BATCH', orders: Object.values(orders), nextSerial: tempSerial }) });
+            document.getElementById('batch-input').value = "";
+            sync();
+            alert("匯入成功");
         }
 
-        function toggleSync(show) { document.getElementById('sync-toast').style.display = show ? 'block' : 'none'; }
+        function copyNotify(id) {
+            const its = rawData.filter(r => r.id === id);
+            const o = its[0];
+            const total = its.reduce((s, i) => s + (i.price * i.qty), 0);
+            const msg = `【SlowOver 訂單通知】\n\n單號：${o.id}\n項目：\n${its.map(i => `- ${i.name} x${i.qty}`).join('\n')}\n總金額：HKD $${total}\n\n💰 付款資料：\nPayMe: ${config.payme}\nFPS ID: ${config.fpsId} (${config.fpsName})\n\n⚠️ 注意事項：\n${config.terms}`;
+            navigator.clipboard.writeText(msg).then(() => alert("已複製通知文案"));
+        }
+
+        function addNewItemRow() {
+            const div = document.createElement('div');
+            div.className = 'card'; div.style.background = "#F9F9F9";
+            div.innerHTML = `<input type="text" class="ni-n" placeholder="商品名稱"><div style="display:flex; gap:5px;"><input type="number" class="ni-q" value="1" placeholder="數量"><input type="number" class="ni-p" placeholder="售價"></div>`;
+            document.getElementById('new-items').appendChild(div);
+        }
+
+        async function saveNewOrder() {
+            const tel = document.getElementById('new-tel').value;
+            const its = Array.from(document.querySelectorAll('#new-items .card')).map(c => ({
+                name: c.querySelector('.ni-n').value,
+                qty: parseInt(c.querySelector('.ni-q').value),
+                price: parseFloat(c.querySelector('.ni-p').value)
+            }));
+            if(!tel || its.length === 0) return alert("資料不全");
+            const newOrder = { id: getOrderNum(config.serial), tel, date: new Date().toISOString().split('T')[0], items: its, rem: "" };
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'SAVE_BATCH', orders: [newOrder], nextSerial: parseInt(config.serial)+1 }) });
+            document.getElementById('new-tel').value = ""; document.getElementById('new-items').innerHTML = "";
+            sync();
+            alert("登記成功");
+        }
+
         function switchPage(p, el) {
             document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
             document.getElementById('page-'+p).classList.add('active');
             el.classList.add('active');
-            if(p === 'buy') renderBuy();
         }
-
-        function renderBuy() {
-            const summary = {};
-            rawData.filter(r => r.paid && !r.bought).forEach(r => {
-                summary[r.name] = (summary[r.name] || 0) + r.qty;
-            });
-            document.getElementById('buy-summary').innerHTML = Object.entries(summary).map(([n, q]) => `
-                <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #EEE;">
-                    <span>${n}</span><b>x${q}</b>
-                </div>
-            `).join('') || "目前無待採購商品";
+        function setFilter(f, el) {
+            currentFilter = f;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderOrders();
         }
+        function closeDetail() { document.getElementById('detail-overlay').style.display = 'none'; }
 
-        window.onload = syncFromCloud;
+        window.onload = () => { sync(); addNewItemRow(); };
     </script>
 </body>
 </html>
